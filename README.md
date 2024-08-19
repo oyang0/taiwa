@@ -35,7 +35,7 @@ ngrok http 5000
 
 ## How to Deploy Locally on Unix
 
-1. **Install Gunicorn**: Gunicorn can be installed using pip, which is a package manager for Python. Open a terminal and type:
+1. **Install Gunicorn**: Gunicorn can be installed using pip, which is a package manager for Python. Open a terminal and type the following.
 
 ```
 pip install gunicorn
@@ -45,4 +45,18 @@ pip install gunicorn
 
 ```
 gunicorn -w 4 app:app
+```
+
+## How to Deploy Locally on Windows
+
+1. **Install Waitress**: Waitress can be installed using pip, which is a package manager for Python. Open a terminal and type the following.
+
+```
+pip install waitress
+```
+
+2. **Run the Flask App with Waitress**: In a terminal, navigate to the directory containing the Flask app and type the following. By default, Waitress will start serving the app on `localhost` on port `8080`.
+
+```
+python server.py
 ```
