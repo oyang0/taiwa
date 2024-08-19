@@ -1,3 +1,2 @@
 fbmessenger
 flask
-sqlite3
