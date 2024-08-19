@@ -1,5 +1,5 @@
 # Taiwa
-Meta App for Japanese Sentence Structure Education
+Meta App for Japanese Sentence Structure Education in Messenger
 
 ## How to Set Up Meta App
 
