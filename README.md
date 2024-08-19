@@ -33,6 +33,16 @@ ngrok http 5000
 
 5. **Test Taiwa**: Go to the Facebook page associated with Taiwa and click 'Send Message'. Any messages sent here will be sent to Taiwa. If Taiwa is set up correctly, you should see Taiwa's replies appear in the chat.
 
-## How to Deploy Locally
+## How to Deploy Locally on Unix
 
-WIP
+1. **Install Gunicorn**: Gunicorn can be installed using pip, which is a package manager for Python. Open a terminal and type:
+
+```
+pip install gunicorn
+```
+
+2. **Run the Flask App with Gunicorn:** In a terminal, navigate to the directory containing the Flask app and type the following. By default, Gunicorn will start serving the app on `localhost` on port `8000`. In the command, `-w 4` specifies that Gunicorn should use 4 worker processes. Adjust this value as necessary for your specific application and environment.
+
+```
+gunicorn -w 4 app:app
+```
