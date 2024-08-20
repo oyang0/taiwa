@@ -10,6 +10,8 @@ class Taiwa(BaseMessenger):
 
     def message(self, message):
         action = message["message"].get("text")
+        action = "".join(c for c in action if c.isalnum() or c.isspace())
+
         if "taiwa" in action.lower().split():
             conn = sqlite3.connect("taiwa.db")
             c = conn.cursor()
