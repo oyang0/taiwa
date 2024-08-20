@@ -11,10 +11,10 @@ def process_message(message):
     c = conn.cursor()
 
     c.execute("SELECT expression FROM expressions")
-    messages = [row[0] for row in c.fetchall()]
+    expressions = [row[0] for row in c.fetchall()]
 
-    random_message = random.choice(messages)
-    response = Text(text=random_message)
+    expression = random.choice(expressions)
+    response = Text(text=expression)
 
     conn.close()
     
