@@ -1,14 +1,14 @@
 from flask import Flask, request
 from taiwa import Taiwa
+import os
 
 app = Flask(__name__)
-bot = None
-verify_token = None
+bot = Taiwa(os.environ['PAGE_ACCESS_TOKEN'])
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
-        if (request.args.get("hub.verify_token") == verify_token):
+        if (request.args.get("hub.verify_token") == os.environ['VERIFY_TOKEN']):
             return request.args.get("hub.challenge")
         else:
             return "Error, wrong validation token"
@@ -18,7 +18,4 @@ def webhook():
         return "Message processed"
 
 if __name__ == "__main__":
-    page_access_token = input("Page access token: ")
-    bot = Taiwa(page_access_token)
-    verify_token = input("Verify token: ")
     app.run(debug=True)

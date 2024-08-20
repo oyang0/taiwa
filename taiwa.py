@@ -1,5 +1,6 @@
 from fbmessenger import BaseMessenger
 from fbmessenger.elements import Text
+import os
 import random
 import sqlite3
 
@@ -16,7 +17,7 @@ class Taiwa(BaseMessenger):
             conn = sqlite3.connect("taiwa.db")
             c = conn.cursor()
 
-            c.execute("SELECT message FROM messages")
+            c.execute("SELECT expression FROM expressions")
             messages = [row[0] for row in c.fetchall()]
 
             random_message = random.choice(messages)
@@ -26,5 +27,4 @@ class Taiwa(BaseMessenger):
             conn.close()
 
 if __name__ == "__main__":
-    page_access_token = input("Page access token: ")
-    messenger = Taiwa(page_access_token=page_access_token)
+    messenger = Taiwa(page_access_token=os.environ['PAGE_ACCESS_TOKEN'])
