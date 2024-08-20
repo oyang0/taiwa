@@ -7,8 +7,6 @@ from fbmessenger import BaseMessenger
 from fbmessenger.elements import Text
 
 def process_message(message):
-    app.logger.debug("Message processing: {}".format(message))
-
     conn = sqlite3.connect("JPN_CommunicationPatterns.db")
     c = conn.cursor()
 
@@ -19,8 +17,6 @@ def process_message(message):
     response = Text(text=random_message)
 
     conn.close()
-
-    app.logger.debug("Message processed: {}".format(message))
     
     return response.to_dict()
 
@@ -35,10 +31,11 @@ class Messenger(BaseMessenger):
         if "text" in message["message"]:
             msg = message["message"]["text"].lower()
             msg = "".join(c for c in msg if c.isalnum() or c.isspace())
-            
+
             if "taiwa" in msg.split():
                 action = process_message(message)
                 res = self.send(action, "RESPONSE")
+                app.logger.debug("Message sent: {}".format(action))
                 app.logger.debug("Response: {}".format(res))
 
 app = Flask(__name__)
