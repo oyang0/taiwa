@@ -20,8 +20,8 @@ pip install flask
 2. **Set Environment Variables:** The Flask app requires an access token and a verify token. The access token is geneterated in the Facebook Developers portal. The verify token is set by you. In a terminal, type the following.
 
 ```
-export PAGE_ACCESS_TOKEN=<YOUR_PAGE_ACCESS_TOKEN>
-export VERIFY_TOKEN=<YOUR_VERIFY_TOKEN>
+export FB_PAGE_TOKEN=<YOUR_PAGE_ACCESS_TOKEN>
+export FB_VERIFY_TOKEN=<YOUR_VERIFY_TOKEN>
 ```
 
 3. **Run the Flask App**: Run the Flask app by typing the following command in a terminal. By default, the Flask app will run on `localhost` on port `5000`.
@@ -79,7 +79,7 @@ python server.py
 4. **Set Environment Variables in Heroku**: The Flask app requires an access token and a verify token. The access token is geneterated in the Facebook Developers portal. The verify token is set by you. In a terminal, run the following command.
 
 ```
-heroku config:PAGE_ACCESS_TOKEN=page_access_token set VERIFY_TOKEN=verify_token
+heroku config:FB_PAGE_TOKEN=page_access_token set FB_VERIFY_TOKEN=verify_token
 ```
 
 5. **Deploy the Flask App to Heroku**: Deploy the Flask app by running `git push heroku main`. This will push the code to the Heroku remote repository and start building the Flask app.
