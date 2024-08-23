@@ -1,4 +1,6 @@
 fbmessenger
 flask
 gunicorn
+psycopg2
 six
+tenacity

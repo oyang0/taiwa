@@ -161,7 +161,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-ngrok.exe
+assistant_id.txt
+fb_page_token.txt
+fb_verify_token.txt
+openai_api_key.txt
 
-page_access_token.txt
-verify_token.txt
+ngrok.exe
