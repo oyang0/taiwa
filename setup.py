@@ -13,7 +13,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 cur = conn.cursor()
 
-for stage in ("taiwa_staging", "taiwa_staging"):
+for stage in ("taiwa_staging", "taiwa_production"):
 	cur.execute(f"CREATE SCHEMA IF NOT EXISTS {stage};")
 
 	cur.execute(f"""
