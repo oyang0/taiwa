@@ -10,34 +10,34 @@ from flask import Flask, request
 from fbmessenger import BaseMessenger
 from fbmessenger.elements import Text, Button
 from fbmessenger.templates import ButtonTemplate
-from openai import OpenAI, NotFoundError
+from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_random_exponential, RetryError
 
 collections.Iterable = Iterable
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def execution_with_backoff(cur, query, vars = None):
     cur.execute(query, vars)
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def thread_creation_with_backoff():
     thread = client.beta.threads.create()
     return thread
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def message_creation_with_backoff(thread, content):
     client.beta.threads.messages.create(thread_id=thread.id, role="user", content=content)
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def message_listing_with_backoff(thread):
     messages = client.beta.threads.messages.list(thread_id=thread.id)
     return messages
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def message_deletion_with_backoff(message, thread):
     client.beta.threads.messages.delete(message_id=message.id, thread_id=thread.id)
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def creation_and_polling_with_backoff(thread):
     run = client.beta.threads.runs.create_and_poll(thread_id=thread.id, assistant_id=os.environ["ASSISTANT_ID"])
 
@@ -51,7 +51,7 @@ def creation_and_polling_with_backoff(thread):
     
     return run
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def get_question_with_backoff(thread):
     try:
         run = creation_and_polling_with_backoff(thread)
@@ -123,6 +123,7 @@ def set_leitner_system(sender, conn, cur):
             cur, f"""
             INSERT INTO {os.environ["SCHEMA"]}.leitner (sender, system)
             VALUES (%s, %s)
+            ON CONFLICT (sender) DO NOTHING
             """, (sender, repr(leitner_system)))
         conn.commit()
     except RetryError as e:
@@ -198,7 +199,7 @@ def select_question(sender, expression, expression_id, conn, cur):
             DO UPDATE SET
                 answer = EXCLUDED.answer,
                 options = EXCLUDED.options,
-                expression_id = EXCLUDED.expression_id;
+                expression_id = EXCLUDED.expression_id
             """, (sender, question["answer"], repr(question["options"]), expression_id))
         conn.commit()
     except RetryError as e:
@@ -253,7 +254,7 @@ def update_leitner_system(sender, payload, answer, expression_id, conn, cur):
         response = process_incorrect_response(leitner_system, answer, expression_id)
 
     try:
-        execution_with_backoff(cur, f"""DELETE FROM {os.environ["SCHEMA"]}.answers WHERE sender = %s""", (sender,))
+        execution_with_backoff(cur, f"DELETE FROM {os.environ["SCHEMA"]}.answers WHERE sender = %s", (sender,))
         execution_with_backoff(
             cur, f"""
             UPDATE {os.environ["SCHEMA"]}.leitner
