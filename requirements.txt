@@ -1,6 +1,7 @@
 fbmessenger
 flask
 gunicorn
+openai
 psycopg2
 six
 tenacity
