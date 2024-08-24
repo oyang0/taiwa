@@ -6,6 +6,7 @@ import re
 import sqlite3
 
 from collections.abc import Iterable
+from contextlib import suppress
 from flask import Flask, request
 from fbmessenger import BaseMessenger
 from fbmessenger.elements import Text, Button
@@ -23,6 +24,10 @@ def execution_with_backoff(cur, query, vars = None):
 def thread_creation_with_backoff():
     thread = client.beta.threads.create()
     return thread
+
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+def thread_deletion_with_backoff(thread):
+    client.beta.threads.delete(thread.id)
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def message_creation_with_backoff(thread, content):
@@ -186,6 +191,9 @@ def select_question(sender, expression, expression_id, conn, cur):
         return e
 
     question = get_question_with_backoff(thread)
+
+    with suppress(RetryError):
+        thread_deletion_with_backoff(thread)
 
     if type(question) is RetryError:
         return question
