@@ -4,19 +4,8 @@ import retries
 
 def set_commands(app):
     url = f"https://graph.facebook.com/v20.0/me/messenger_profile?access_token={os.environ["FB_PAGE_TOKEN"]}"
-    #json = {"commands": [{"locale": "default", "commands": 
-    #                      [{key: command[key] for key in ("name", "description")} for command in commands]}]}
-    json = {
-       "commands": [
-           {
-               "locale": "default",
-               "commands": [
-                   {"name": "curry", "description": "mmm"},
-                   {"name": "udon", "description": "mmmmmm"},
-               ]
-           }
-       ]
-   }
+    json = {"commands": [{"locale": "default", "commands": 
+                         [{key: command[key] for key in ("name", "description")} for command in commands]}]}
     headers = {"Content-Type": "application/json"}
     app.logger.debug(f"JSON: {json}")
     response = requests.post(url, json=json, headers=headers)
@@ -57,5 +46,5 @@ commands = [{"name": "delete conversation",
              "description": "Delete this entire conversation",
              "function": delete_conversation},
             {"name": "report technical problem",
-             "description": "Briefly explain what happened and what we need to do to reproduce the problem",
+             "description": "Briefly explain what happened and how to reproduce the problem",
              "function": report_technical_problem}]
