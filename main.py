@@ -55,30 +55,29 @@ class Messenger(BaseMessenger):
     def message(self, message):
         app.logger.debug(f"Message received: {message}")
         self.send_action("mark_seen")
+        self.send_action("typing_on")
 
-        if "text" in message["message"]:
-            self.send_action("typing_on")
+        try:
+            conn = psycopg2.connect(os.environ["DATABASE_URL"])
+            cur = conn.cursor()
+            actions = process_message(message, cur)
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as exception:
+            actions = exceptions.process_exception(exception)
 
-            try:
-                conn = psycopg2.connect(os.environ["DATABASE_URL"])
-                cur = conn.cursor()
-                actions = process_message(message, cur)
-                conn.commit()
-                cur.close()
-                conn.close()
-            except Exception as exception:
-                actions = exceptions.process_exception(exception)
-
-            for action in actions:
-                res = self.send(action, "RESPONSE")
-                app.logger.debug(f"Message sent: {action}")
-                app.logger.debug(f"Response: {res}")
-            
-            self.send_action("typing_off")
+        for action in actions:
+            res = self.send(action, "RESPONSE")
+            app.logger.debug(f"Message sent: {action}")
+            app.logger.debug(f"Response: {res}")
+        
+        self.send_action("typing_off")
     
     def postback(self, message):
         app.logger.debug(f"Message received: {message}")
         self.send_action("mark_seen")
+        self.send_action("typing_on")
 
         try:
             conn = psycopg2.connect(os.environ["DATABASE_URL"])
@@ -86,14 +85,12 @@ class Messenger(BaseMessenger):
             answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
 
             if message["postback"]["payload"] in options:
-                self.send_action("typing_on")
                 actions = process_postback(message, answer, id, cur)
                 conn.commit()
             
             cur.close()
             conn.close()
         except Exception as exception:
-            self.send_action("typing_on")
             actions = exceptions.process_exception(exception)
 
         for action in actions:
