@@ -30,7 +30,7 @@ def process_message(message, cur):
     with suppress(RetryError):
         retries.thread_deletion_with_backoff(client, thread)
 
-    messages.set_question(message["sender"]["id"], question["answer"], question["options"], id)
+    messages.set_question(message["sender"]["id"], question["answer"], question["options"], id, cur)
     random.shuffle(question["options"])
     buttons = [Button("postback", title=option, payload=option) for option in question["options"]]
     response = ButtonTemplate(text=question["question"], buttons=buttons)
