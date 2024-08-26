@@ -39,7 +39,7 @@ def process_message(message, cur):
     return responses
 
 def process_postback(message, cur):
-    answer, options, id = postbacks.get_question(message["sender"]["id"])
+    answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
 
     if message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
