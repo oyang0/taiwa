@@ -11,8 +11,8 @@ def set_commands(app):
            {
                "locale": "default",
                "commands": [
-                   {"name": "delete conversation", "description": "Delete this entire conversation"},
-                   {"name": "report technical problem", "description": "Briefly explain what happened"}
+                   {"name": "delete", "description": "Delete this entire conversation"},
+                   {"name": "report", "description": "Briefly explain what happened"}
                ]
            }
        ]
