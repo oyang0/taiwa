@@ -1,4 +1,5 @@
 import collections
+import commands
 import exceptions
 import messages
 import os
@@ -63,6 +64,7 @@ class Messenger(BaseMessenger):
     def __init__(self, page_access_token):
         self.page_access_token = page_access_token
         super(Messenger, self).__init__(self.page_access_token)
+        commands.set_commands()
 
     def message(self, message):
         app.logger.debug(f"Message received: {message}")
