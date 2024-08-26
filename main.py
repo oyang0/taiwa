@@ -43,12 +43,10 @@ def process_postback(message, cur):
 
     if message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-
-        if message["postback"]["payload"] == answer:
-            responses = [postbacks.process_correct_response(leitner_system, answer, id)]
-        else:
-            responses = [postbacks.process_incorrect_response(leitner_system, answer, id)]
-
+        response = (postbacks.process_correct_response(leitner_system, answer, id) if 
+                    message["postback"]["payload"] == answer else 
+                    postbacks.process_incorrect_response(leitner_system, answer, id))
+        responses = [response.to_dict()]
         postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
     else:
         responses = []
