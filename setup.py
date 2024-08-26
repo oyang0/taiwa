@@ -7,8 +7,6 @@ cur = conn.cursor()
 for stage in ("taiwa_staging", "taiwa_production"):
 	cur.execute(f"CREATE SCHEMA IF NOT EXISTS {stage};")
 
-	cur.execute(f"DROP TABLE IF EXISTS {stage}.leitner")
-
 	cur.execute(f"""
 	CREATE TABLE IF NOT EXISTS {stage}.leitner (
 		id SERIAL PRIMARY KEY,
@@ -16,8 +14,6 @@ for stage in ("taiwa_staging", "taiwa_production"):
 		system TEXT NOT NULL
 	);
 	""")
-
-	cur.execute(f"DROP TABLE IF EXISTS {stage}.answers")
 
 	cur.execute(f"""
 	CREATE TABLE IF NOT EXISTS {stage}.answers (
