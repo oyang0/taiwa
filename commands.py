@@ -46,5 +46,5 @@ commands = [{"name": "delete conversation",
              "description": "Delete this entire conversation",
              "function": delete_conversation},
             {"name": "report technical problem",
-             "description": "Briefly explain what happened and how to reproduce the problem",
+             "description": "Briefly explain what happened",
              "function": report_technical_problem}]
