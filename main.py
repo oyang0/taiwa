@@ -38,19 +38,13 @@ def process_message(message, cur):
 
     return responses
 
-def process_postback(message, cur):
-    answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
-
-    if message["postback"]["payload"] in options:
-        leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-        response = (postbacks.process_correct_response(leitner_system, answer, id) if 
-                    message["postback"]["payload"] == answer else 
-                    postbacks.process_incorrect_response(leitner_system, answer, id))
-        responses = [response.to_dict()]
-        postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
-    else:
-        responses = []
-    
+def process_postback(message, answer, id, cur):
+    leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
+    response = (postbacks.process_correct_response(leitner_system, answer, id) if 
+                message["postback"]["payload"] == answer else 
+                postbacks.process_incorrect_response(leitner_system, answer, id))
+    responses = [response.to_dict()]
+    postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
     return responses
 
 class Messenger(BaseMessenger):
@@ -68,17 +62,16 @@ class Messenger(BaseMessenger):
 
             if "taiwa" in msg.split():
                 self.send_action("typing_on")
-                conn = psycopg2.connect(os.environ["DATABASE_URL"])
-                cur = conn.cursor()
 
                 try:
+                    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+                    cur = conn.cursor()
                     actions = process_message(message, cur)
                     conn.commit()
+                    cur.close()
+                    conn.close()
                 except Exception as exception:
                     actions = exceptions.process_exception(exception)
-                
-                cur.close()
-                conn.close()
 
                 for action in actions:
                     res = self.send(action, "RESPONSE")
@@ -90,17 +83,21 @@ class Messenger(BaseMessenger):
     def postback(self, message):
         app.logger.debug(f"Message received: {message}")
         self.send_action("mark_seen")
-        conn = psycopg2.connect(os.environ["DATABASE_URL"])
-        cur = conn.cursor()
 
         try:
-            actions = process_postback(message, cur)
-            conn.commit()
+            conn = psycopg2.connect(os.environ["DATABASE_URL"])
+            cur = conn.cursor()
+            answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
+
+            if message["postback"]["payload"] in options:
+                self.send_action("typing_on")
+                actions = process_postback(message, answer, id, cur)
+                conn.commit()
+            
+            cur.close()
+            conn.close()
         except Exception as exception:
             actions = exceptions.process_exception(exception)
-
-        cur.close()
-        conn.close()
 
         for action in actions:
             res = self.send(action, "RESPONSE")
