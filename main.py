@@ -2,10 +2,8 @@ import collections
 import exceptions
 import messages
 import os
-import psycopg2
 import postbacks
 import random
-import re
 import retries
 
 from collections.abc import Iterable
@@ -19,7 +17,8 @@ from tenacity import RetryError
 
 collections.Iterable = Iterable
 
-def process_message(message, cur):
+def process_message(message):
+    conn, cur = retries.get_connection_and_cursor_with_backoff()
     leitner_system = messages.get_leitner_system(message["sender"]["id"], cur)
     box = messages.get_random_box(leitner_system)
     id, expression = messages.get_random_expression(leitner_system, box)
@@ -30,26 +29,33 @@ def process_message(message, cur):
     with suppress(RetryError):
         retries.thread_deletion_with_backoff(client, thread)
 
-    messages.set_question(message["sender"]["id"], question["answer"], question["options"], id, cur)
+    text = Text(text=expression)
     random.shuffle(question["options"])
     buttons = [Button("postback", title=option, payload=option) for option in question["options"]]
-    response = ButtonTemplate(text=question["question"], buttons=buttons)
-    responses = [Text(text=expression).to_dict(), response.to_dict()]
+    button_template = ButtonTemplate(text=question["question"], buttons=buttons)
+    responses = [text.to_dict(), button_template.to_dict()]
+    messages.set_question(message["sender"]["id"], question["answer"], question["options"], id, cur)
+    retries.commit_with_backoff(conn)
+    retries.close_cursor_and_connection_with_backoff(cur, conn)
 
     return responses
 
-def process_postback(message, cur):
+def process_postback(message):
+    conn, cur = retries.get_connection_and_cursor_with_backoff()
     answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
 
     if options and message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-        response = (postbacks.process_correct_response(leitner_system, answer, id) if 
-                    message["postback"]["payload"] == answer else 
+        response = (postbacks.process_correct_response(leitner_system, answer, id) if
+                    message["postback"]["payload"] == answer else
                     postbacks.process_incorrect_response(leitner_system, answer, id))
         responses = [response.to_dict()]
         postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
+        retries.commit_with_backoff(conn)
     else:
         responses = []
+
+    retries.close_cursor_and_connection_with_backoff(cur, conn)
 
     return responses
 
@@ -64,12 +70,7 @@ class Messenger(BaseMessenger):
         self.send_action("typing_on")
 
         try:
-            conn = psycopg2.connect(os.environ["DATABASE_URL"])
-            cur = conn.cursor()
-            actions = process_message(message, cur)
-            conn.commit()
-            cur.close()
-            conn.close()
+            actions = process_message(message)
         except Exception as exception:
             actions = exceptions.process_exception(exception)
 
@@ -86,12 +87,7 @@ class Messenger(BaseMessenger):
         self.send_action("typing_on")
 
         try:
-            conn = psycopg2.connect(os.environ["DATABASE_URL"])
-            cur = conn.cursor()
-            actions = process_postback(message, cur)
-            conn.commit()
-            cur.close()
-            conn.close()
+            actions = process_postback(message)
         except Exception as exception:
             actions = exceptions.process_exception(exception)
 
