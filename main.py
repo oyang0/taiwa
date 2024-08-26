@@ -84,7 +84,7 @@ class Messenger(BaseMessenger):
             cur = conn.cursor()
             answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
 
-            if message["postback"]["payload"] in options:
+            if options and message["postback"]["payload"] in options:
                 actions = process_postback(message, answer, id, cur)
                 conn.commit()
             

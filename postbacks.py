@@ -10,7 +10,8 @@ def get_question(sender, cur):
         FROM {os.environ["SCHEMA"]}.answers
         WHERE sender = %s
         """, (sender,))
-    answer, options, id = cur.fetchone()
+    row = cur.fetchone()
+    answer, options, id = row if row else (None, "None", None)
     return answer, eval(options), id
 
 def get_leitner_system(sender, cur):
