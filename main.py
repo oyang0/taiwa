@@ -63,8 +63,6 @@ def process_postback(message):
 class Messenger(BaseMessenger):
     def __init__(self, page_access_token):
         self.page_access_token = page_access_token
-        res = commands.set_commands()
-        app.logger.debug("Response: {}".format(res))
         super(Messenger, self).__init__(self.page_access_token)
 
     def message(self, message):
@@ -103,7 +101,7 @@ class Messenger(BaseMessenger):
     
     def init_bot(self):
         self.add_whitelisted_domains("https://facebook.com/")
-        res = commands.set_commands()
+        res = commands.set_commands(app)
         app.logger.debug("Response: {}".format(res))
 
 app = Flask(__name__)
