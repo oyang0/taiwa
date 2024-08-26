@@ -1,20 +1,13 @@
 import os
 import psycopg2
 
-from urllib.parse import urlparse
-
-result = urlparse(os.environ["DATABASE_URL"])
-conn = psycopg2.connect(
-    dbname=result.path[1:],
-    user=result.username,
-    password=result.password,
-    host=result.hostname
-)
-cur = conn.cursor()
+conn = psycopg2.connect(os.environ["DATABASE_URL"])
 cur = conn.cursor()
 
 for stage in ("taiwa_staging", "taiwa_production"):
 	cur.execute(f"CREATE SCHEMA IF NOT EXISTS {stage};")
+
+	cur.execute(f"DROP TABLE IF EXISTS {stage}.leitner")
 
 	cur.execute(f"""
 	CREATE TABLE IF NOT EXISTS {stage}.leitner (
@@ -23,6 +16,8 @@ for stage in ("taiwa_staging", "taiwa_production"):
 		system TEXT NOT NULL
 	);
 	""")
+
+	cur.execute(f"DROP TABLE IF EXISTS {stage}.answers")
 
 	cur.execute(f"""
 	CREATE TABLE IF NOT EXISTS {stage}.answers (
