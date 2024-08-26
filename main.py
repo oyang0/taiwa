@@ -63,6 +63,8 @@ def process_postback(message):
 class Messenger(BaseMessenger):
     def __init__(self, page_access_token):
         self.page_access_token = page_access_token
+        res = commands.set_commands()
+        app.logger.debug("Response: {}".format(res))
         super(Messenger, self).__init__(self.page_access_token)
 
     def message(self, message):
