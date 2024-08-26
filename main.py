@@ -101,7 +101,7 @@ class Messenger(BaseMessenger):
     
     def init_bot(self):
         self.add_whitelisted_domains("https://facebook.com/")
-        res = commands.set_commands(app)
+        res = commands.set_commands()
         app.logger.debug("Response: {}".format(res))
 
 app = Flask(__name__)
