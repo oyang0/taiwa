@@ -47,10 +47,9 @@ def process_postback(message):
 
     if options and message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-        response = (postbacks.process_correct_response(leitner_system, answer, id) if
+        responses = (postbacks.process_correct_response(leitner_system, answer, id) if
                     message["postback"]["payload"] == answer else
                     postbacks.process_incorrect_response(leitner_system, answer, id))
-        responses = [response.to_dict()]
         postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
         retries.commit_with_backoff(conn)
     else:

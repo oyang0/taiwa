@@ -2,6 +2,8 @@ import os
 import requests
 import retries
 
+from fbmessenger.elements import Text
+
 def set_commands():
     url = f"https://graph.facebook.com/v20.0/me/messenger_profile?access_token={os.environ["FB_PAGE_TOKEN"]}"
     json = {"commands": [{"locale": "default", "commands": 
@@ -25,6 +27,8 @@ def delete_conversation(message, cur):
         DELETE FROM {os.environ["SCHEMA"]}.answers
         WHERE sender = %s
         """, (message["sender"]["id"],))
+    responses = [Text(text="Conversation deleted")]
+    return responses
 
 def report_technical_problem(message, cur):
     retries.execution_with_backoff(
@@ -32,14 +36,17 @@ def report_technical_problem(message, cur):
         INSERT INTO {os.environ["SCHEMA"]}.problems (sender, problem)
         VALUES (%s, %s)
         """, (message["sender"]["id"], message["message"]["text"]))
+    responses = [Text(text="Technical problem reported")]
+    return responses
 
 def process_command(message):
     conn, cur = retries.get_connection_and_cursor_with_backoff()
     indices = {message["message"]["text"].find(command["name"]): command["function"] for command in commands}
     indices.pop(-1, None)
-    indices[min(indices)](message, cur)
+    responses = indices[min(indices)](message, cur)
     retries.commit_with_backoff(conn)
     retries.close_cursor_and_connection_with_backoff(cur, conn)
+    return responses
 
 commands = [{"name": "delete",
              "description": "Delete this entire conversation",

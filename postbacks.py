@@ -30,9 +30,9 @@ def process_correct_response(leitner_system, answer, expression_id):
             leitner_system[box + 1].add(expression_id)
             break
 
-    response = Text(text=f"✔️ Correct! The answer is: {answer}")
+    responses = [Text(text=f"✔️ Correct! The answer is: {answer}").to_dict()]
 
-    return response
+    return responses
 
 def process_incorrect_response(leitner_system, answer, expression_id):
     for box in leitner_system:
@@ -41,9 +41,9 @@ def process_incorrect_response(leitner_system, answer, expression_id):
             leitner_system[1].add(expression_id)
             break
 
-    response = Text(text=f"❌ Incorrect. The answer is: {answer}")
+    responses = [Text(text=f"❌ Incorrect. The answer is: {answer}").to_dict()]
 
-    return response
+    return responses
 
 def set_leitner_system(leitner_system, sender, cur):
     retries.execution_with_backoff(cur, f"DELETE FROM {os.environ["SCHEMA"]}.answers WHERE sender = %s", (sender,))
