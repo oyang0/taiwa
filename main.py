@@ -57,28 +57,24 @@ class Messenger(BaseMessenger):
         self.send_action("mark_seen")
 
         if "text" in message["message"]:
-            msg = message["message"]["text"].lower()
-            msg = re.sub(r"[^a-z0-9]", " ", msg)
+            self.send_action("typing_on")
 
-            if "taiwa" in msg.split():
-                self.send_action("typing_on")
+            try:
+                conn = psycopg2.connect(os.environ["DATABASE_URL"])
+                cur = conn.cursor()
+                actions = process_message(message, cur)
+                conn.commit()
+                cur.close()
+                conn.close()
+            except Exception as exception:
+                actions = exceptions.process_exception(exception)
 
-                try:
-                    conn = psycopg2.connect(os.environ["DATABASE_URL"])
-                    cur = conn.cursor()
-                    actions = process_message(message, cur)
-                    conn.commit()
-                    cur.close()
-                    conn.close()
-                except Exception as exception:
-                    actions = exceptions.process_exception(exception)
-
-                for action in actions:
-                    res = self.send(action, "RESPONSE")
-                    app.logger.debug(f"Message sent: {action}")
-                    app.logger.debug(f"Response: {res}")
-                
-                self.send_action("typing_off")
+            for action in actions:
+                res = self.send(action, "RESPONSE")
+                app.logger.debug(f"Message sent: {action}")
+                app.logger.debug(f"Response: {res}")
+            
+            self.send_action("typing_off")
     
     def postback(self, message):
         app.logger.debug(f"Message received: {message}")
@@ -97,6 +93,7 @@ class Messenger(BaseMessenger):
             cur.close()
             conn.close()
         except Exception as exception:
+            self.send_action("typing_on")
             actions = exceptions.process_exception(exception)
 
         for action in actions:
