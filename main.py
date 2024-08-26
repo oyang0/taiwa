@@ -14,6 +14,7 @@ from flask import Flask, request
 from fbmessenger import BaseMessenger
 from fbmessenger.elements import Text, Button
 from fbmessenger.templates import ButtonTemplate
+from fbmessenger.thread_settings import GreetingText, GetStartedButton, PersistentMenuItem, PersistentMenu
 from openai import OpenAI
 from tenacity import RetryError
 
@@ -108,6 +109,32 @@ class Messenger(BaseMessenger):
             app.logger.debug(f"Response: {res}")
 
         self.send_action("typing_off")
+    
+    def init_bot(self):
+        self.add_whitelisted_domains('https://facebook.com/')
+        greeting = GreetingText(text='Welcome to the fbmessenger bot demo.')
+        self.set_messenger_profile(greeting.to_dict())
+
+        get_started = GetStartedButton(payload='start')
+        self.set_messenger_profile(get_started.to_dict())
+
+        menu_item_1 = PersistentMenuItem(
+            item_type='postback',
+            title='Help',
+            payload='help',
+        )
+        menu_item_2 = PersistentMenuItem(
+            item_type='web_url',
+            title='Messenger Docs',
+            url='https://developers.facebook.com/docs/messenger-platform',
+        )
+        persistent_menu = PersistentMenu(menu_items=[
+            menu_item_1,
+            menu_item_2
+        ])
+
+        res = self.set_messenger_profile(persistent_menu.to_dict())
+        app.logger.debug('Response: {}'.format(res))
 
 app = Flask(__name__)
 app.debug = True
@@ -119,6 +146,9 @@ client = OpenAI()
 def webhook():
     if request.method == "GET":
         if request.args.get("hub.verify_token") == os.environ.get("FB_VERIFY_TOKEN"):
+            if request.args.get("init") and request.args.get("init") == "true":
+                messenger.init_bot()
+                return ""
             return request.args.get("hub.challenge")
         raise ValueError("FB_VERIFY_TOKEN does not match.")
     elif request.method == "POST":
