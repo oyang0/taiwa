@@ -64,7 +64,6 @@ class Messenger(BaseMessenger):
     def __init__(self, page_access_token):
         self.page_access_token = page_access_token
         super(Messenger, self).__init__(self.page_access_token)
-        commands.set_commands(app)
 
     def message(self, message):
         app.logger.debug(f"Message received: {message}")
@@ -72,7 +71,7 @@ class Messenger(BaseMessenger):
         self.send_action("typing_on")
 
         try:
-            actions = process_message(message)
+            actions = commands.process_command(message) if commands.is_command(message) else process_message(message)
         except Exception as exception:
             actions = exceptions.process_exception(exception)
 
@@ -99,6 +98,11 @@ class Messenger(BaseMessenger):
             app.logger.debug(f"Response: {res}")
 
         self.send_action("typing_off")
+    
+    def init_bot(self):
+        self.add_whitelisted_domains("https://facebook.com/")
+        res = commands.set_commands()
+        app.logger.debug("Response: {}".format(res))
 
 app = Flask(__name__)
 app.debug = True
@@ -110,6 +114,9 @@ client = OpenAI()
 def webhook():
     if request.method == "GET":
         if request.args.get("hub.verify_token") == os.environ.get("FB_VERIFY_TOKEN"):
+            if request.args.get("init") and request.args.get("init") == "true":
+                messenger.init_bot()
+                return ""
             return request.args.get("hub.challenge")
         raise ValueError("FB_VERIFY_TOKEN does not match.")
     elif request.method == "POST":

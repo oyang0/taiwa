@@ -25,6 +25,14 @@ for stage in ("taiwa_staging", "taiwa_production"):
 	);
 	""")
 
+	cur.execute(f"""
+	CREATE TABLE IF NOT EXISTS {stage}.problems (
+		id SERIAL PRIMARY KEY,
+		sender TEXT NOT NULL,
+		problem TEXT NOT NULL
+	);
+	""")
+
 conn.commit()
 cur.close()
 conn.close()
