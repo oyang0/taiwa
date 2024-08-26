@@ -23,12 +23,12 @@ def process_message(message, cur):
     leitner_system = messages.get_leitner_system(message["sender"]["id"], cur)
     box = messages.get_random_box(leitner_system)
     id, expression = messages.get_random_expression(leitner_system, box)
-    thread = retries.thread_creation_with_backoff()
-    retries.message_creation_with_backoff(thread, expression)
-    question = retries.get_question_with_backoff(thread)
+    thread = retries.thread_creation_with_backoff(client)
+    retries.message_creation_with_backoff(client, thread, expression)
+    question = retries.get_question_with_backoff(client, thread)
 
     with suppress(RetryError):
-        retries.thread_deletion_with_backoff(thread)
+        retries.thread_deletion_with_backoff(client, thread)
 
     messages.set_question(message["sender"]["id"], question["answer"], question["options"], id)
     random.shuffle(question["options"])
