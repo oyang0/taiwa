@@ -27,7 +27,7 @@ def delete_conversation(message, cur):
         DELETE FROM {os.environ["SCHEMA"]}.answers
         WHERE sender = %s
         """, (message["sender"]["id"],))
-    responses = [Text(text="Conversation deleted")]
+    responses = [Text(text="Conversation deleted").to_dict()]
     return responses
 
 def report_technical_problem(message, cur):
@@ -36,7 +36,7 @@ def report_technical_problem(message, cur):
         INSERT INTO {os.environ["SCHEMA"]}.problems (sender, problem)
         VALUES (%s, %s)
         """, (message["sender"]["id"], message["message"]["text"]))
-    responses = [Text(text="Technical problem reported")]
+    responses = [Text(text="Technical problem reported").to_dict()]
     return responses
 
 def process_command(message):
