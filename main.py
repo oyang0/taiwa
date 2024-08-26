@@ -38,13 +38,19 @@ def process_message(message, cur):
 
     return responses
 
-def process_postback(message, answer, id, cur):
-    leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-    response = (postbacks.process_correct_response(leitner_system, answer, id) if 
-                message["postback"]["payload"] == answer else 
-                postbacks.process_incorrect_response(leitner_system, answer, id))
-    responses = [response.to_dict()]
-    postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
+def process_postback(message, cur):
+    answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
+
+    if options and message["postback"]["payload"] in options:
+        leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
+        response = (postbacks.process_correct_response(leitner_system, answer, id) if 
+                    message["postback"]["payload"] == answer else 
+                    postbacks.process_incorrect_response(leitner_system, answer, id))
+        responses = [response.to_dict()]
+        postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
+    else:
+        responses = []
+
     return responses
 
 class Messenger(BaseMessenger):
@@ -82,12 +88,8 @@ class Messenger(BaseMessenger):
         try:
             conn = psycopg2.connect(os.environ["DATABASE_URL"])
             cur = conn.cursor()
-            answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
-
-            if options and message["postback"]["payload"] in options:
-                actions = process_postback(message, answer, id, cur)
-                conn.commit()
-            
+            actions = process_postback(message, cur)
+            conn.commit()
             cur.close()
             conn.close()
         except Exception as exception:
