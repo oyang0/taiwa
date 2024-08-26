@@ -64,7 +64,7 @@ class Messenger(BaseMessenger):
     def __init__(self, page_access_token):
         self.page_access_token = page_access_token
         super(Messenger, self).__init__(self.page_access_token)
-        commands.set_commands()
+        commands.set_commands(app)
 
     def message(self, message):
         app.logger.debug(f"Message received: {message}")

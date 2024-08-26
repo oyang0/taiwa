@@ -1,7 +1,7 @@
 import os
 import requests
 
-def set_commands():
+def set_commands(app):
     url = f"https://graph.facebook.com/v20.0/me/messenger_profile?access_token={os.environ["FB_PAGE_TOKEN"]}"
     json = {
         "commands": [
@@ -17,3 +17,4 @@ def set_commands():
         ]
     }
     response = requests.post(url, json=json, headers={"Content-Type": "application/json"})
+    app.logger.debug(f"Request response: {response.json()}")
