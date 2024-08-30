@@ -22,13 +22,6 @@ CREATE TABLE IF NOT EXISTS {os.environ["SCHEMA"]}.leitner (
 """)
 
 cur.execute(f"""
-CREATE TABLE IF NOT EXISTS {os.environ["SCHEMA"]}.characters (
-	id SERIAL PRIMARY KEY,
-	sender TEXT NOT NULL UNIQUE,
-    limit SMALLINT NOT NULL
-""")
-
-cur.execute(f"""
 CREATE TABLE IF NOT EXISTS {os.environ["SCHEMA"]}.questions (
 	id SERIAL PRIMARY KEY,
 	sender TEXT NOT NULL UNIQUE,

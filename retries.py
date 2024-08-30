@@ -58,37 +58,22 @@ def completion_creation_with_backoff(client, system_prompt, content, temperature
     )
     return response.choices[0].message.content
 
-def set_character_limit(sender, cur):
-    character_limit = 20
-    execution_with_backoff(cur, f"""
-        INSERT INTO {os.environ["SCHEMA"]}.characters (sender, limit)
-        VALUES (%s, %s)
-        """, (sender, character_limit))
-    return character_limit
-
-def get_character_limit(sender, cur):
-    execution_with_backoff(cur, f"SELECT limit FROM {os.environ["SCHEMA"]}.characters WHERE sender = %s", (sender,))
-    row = cur.fetchone()
-    return row[0] if row else set_character_limit(sender, cur)
-
-def is_correct(question, sender, cur):
-    character_limit = get_character_limit(sender, cur)
-
+def is_correct(question):
     if len(question) > 640:
         return False
     elif len(question["options"]) > 3:
         return False
-    elif any([len(option) > character_limit for option in question["options"]]):
+    elif any([len(option) > 15 for option in question["options"]]):
         return False
     elif question["answer"] not in question["options"]:
         return False
 
     return True
 
-def get_question(expression, sender, cur, client):
+def get_question(expression, client):
     question, attempt, attempts = None, 0, 6
 
-    while (not question or not messages.is_correct(question, sender, cur)) and attempt < attempts: 
+    while (not question or not messages.is_correct(question)) and attempt < attempts: 
         question = messages.get_question(expression, client)
         attempt += 1
     

@@ -15,23 +15,6 @@ def set_commands():
 def is_command(message):
     return "text" in message and any([command["name"] in message["text"] for command in commands])
 
-def set_character_limit(message, cur):
-    try:
-        character_limit = int(message["message"]["text"].lower().replace("limit", ""))
-
-        if character_limit < 1 or character_limit > 20:
-            raise ValueError("character limit is less than 1 or greater than 20")
-
-        retries.execution_with_backoff(cur, f"""
-            INSERT INTO {os.environ["SCHEMA"]}.characters (sender, limit)
-            VALUES (%s, %s)
-            """, (message["sender"]["id"], character_limit))
-        response = "Character limit set"
-    except ValueError:
-        response = "Missing character limit"
-    
-    return response
-
 def delete_conversation(message, cur):
     retries.execution_with_backoff(cur, f"""
         DELETE FROM {os.environ["SCHEMA"]}.leitner
@@ -63,10 +46,7 @@ def process_command(message, cur):
     response = Text(text=response)
     return (response.to_dict(),)
 
-commands = [{"name": "limit",
-             "description": "Set character limit for multiple choice options",
-             "function": set_character_limit},
-            {"name": "delete",
+commands = [{"name": "delete",
              "description": "Delete this entire conversation",
              "function": delete_conversation},
             {"name": "report",
