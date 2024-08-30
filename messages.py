@@ -75,15 +75,13 @@ def get_response_format():
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
     cur.execute("SELECT content FROM openai WHERE role='response_format'")
-    response_format = cur.fetchone()[0]
+    response_format = repr(cur.fetchone()[0].replace("true", "True").replace("false", "False"))
     cur.close()
     conn.close()
     return response_format
 
 def get_question(expression, client):
-    system_prompt = get_system_prompt()
-    response_format = get_response_format()
-    question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1.2, response_format)
+    question = retries.completion_creation_with_backoff(client, get_system_prompt(), expression, 1.2, get_response_format())
     return eval(question)
     
 def set_question(question, sender, expression_id, cur):
