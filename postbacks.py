@@ -48,16 +48,16 @@ def get_expression(expression_id):
     conn.close()
     return expression
 
-def get_user_message(question, expression_id):
+def get_user_message(question, options, answer, expression_id):
     expression = get_expression(expression_id)
     options = repr(question["options"]).replace("'", "\"").replace(" ", "")
     user_message = ("{\"context\":\"%s\",\"question\":\"%s\",\"options\":%s,\"answer\":\"%s\"" % 
-        (expression, question["question"], options, question["answer"]))
+        (expression, question, options, answer))
     return user_message
 
-def get_explanation(question, expression_id, client):
+def get_explanation(question, options, answer, expression_id, client):
     system_prompt = get_system_prompt()
-    user_message = get_user_message(question, expression_id)
+    user_message = get_user_message(question, options, answer, expression_id)
     explanation = retries.completion_creation_with_backoff(client, system_prompt, user_message, 0)
     return explanation
 
