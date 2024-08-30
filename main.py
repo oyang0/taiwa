@@ -55,12 +55,12 @@ class Messenger(BaseMessenger):
         conn, cur = retries.get_connection_and_cursor_with_backoff()
         mid = message["message"]["mid"]
         self.send_action("mark_seen")
-        self.send_action("typing_on")
 
         if not messages.is_handled(mid, cur):
             try:
                 messages.set_handled(mid, message["timestamp"], cur)
                 retries.commit_with_backoff(conn)
+                self.send_action("typing_on")
                 
                 try:
                     if commands.is_command(message["message"]):
@@ -76,11 +76,11 @@ class Messenger(BaseMessenger):
                     res = self.send(action, "RESPONSE")
                     app.logger.debug(f"Message sent: {action}")
                     app.logger.debug(f"Response: {res}")
+                
+                self.send_action("typing_off")
             except:
                 app.logger.debug(f"Not handled: {mid}")
-            
-            self.send_action("typing_off")
-        
+
         retries.close_cursor_and_connection_with_backoff(cur, conn)
     
     def postback(self, message):
@@ -88,12 +88,12 @@ class Messenger(BaseMessenger):
         conn, cur = retries.get_connection_and_cursor_with_backoff()
         mid = message["postback"]["mid"]
         self.send_action("mark_seen")
-        self.send_action("typing_on")
 
         if not postbacks.is_handled(mid, cur):
             try:
                 postbacks.set_handled(mid, message["timestamp"], cur)
                 retries.commit_with_backoff(conn)
+                self.send_action("typing_on")
 
                 try:
                     actions = process_postback(message, cur)
@@ -105,10 +105,10 @@ class Messenger(BaseMessenger):
                     res = self.send(action, "RESPONSE")
                     app.logger.debug(f"Message sent: {action}")
                     app.logger.debug(f"Response: {res}")
+                
+                self.send_action("typing_off")
             except:
                 app.logger.debug(f"Not handled: {mid}")
-
-        self.send_action("typing_off")
     
     def init_bot(self):
         self.add_whitelisted_domains("https://facebook.com/")
