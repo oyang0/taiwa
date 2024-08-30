@@ -172,8 +172,10 @@ cython_debug/
 assistant_id.txt
 database_url.txt
 fb_page_token.txt
+fb_page_token_test.txt
 fb_verify_token.txt
 init_bot.txt
+init_bot_test.txt
 openai_api_key.txt
 
 # Adding `ngrok.exe` to your `.gitignore` file is a good practice for several reasons. First,

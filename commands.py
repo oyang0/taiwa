@@ -21,19 +21,23 @@ def delete_conversation(message, cur):
         WHERE sender = %s
         """, (message["sender"]["id"],))
     retries.execution_with_backoff(cur, f"""
-        DELETE FROM {os.environ["SCHEMA"]}.answers
+        DELETE FROM {os.environ["SCHEMA"]}.questions
         WHERE sender = %s
         """, (message["sender"]["id"],))
     response = "Conversation deleted"
     return response
 
 def report_technical_problem(message, cur):
-    retries.execution_with_backoff(
-        cur, f"""
-        INSERT INTO {os.environ["SCHEMA"]}.problems (sender, problem)
-        VALUES (%s, %s)
-        """, (message["sender"]["id"], message["message"]["text"]))
-    response = "Technical problem reported"
+    if message["message"]["text"].lower().replace("report", ""):
+        retries.execution_with_backoff(
+            cur, f"""
+            INSERT INTO {os.environ["SCHEMA"]}.problems (sender, problem)
+            VALUES (%s, %s)
+            """, (message["sender"]["id"], message["message"]["text"]))
+        response = "Technical problem reported"
+    else:
+        response = "Missing technical problem"
+
     return response
 
 def process_command(message, cur):

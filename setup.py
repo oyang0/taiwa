@@ -9,7 +9,6 @@ cur = conn.cursor()
 cur.execute(f"CREATE SCHEMA IF NOT EXISTS {os.environ["SCHEMA"]};")
 
 cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.leitner")
-cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.answers")
 cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.questions")
 cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.problems")
 cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.messages")
