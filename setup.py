@@ -25,6 +25,7 @@ cur.execute(f"""
 CREATE TABLE IF NOT EXISTS {os.environ["SCHEMA"]}.questions (
 	id SERIAL PRIMARY KEY,
 	sender TEXT NOT NULL UNIQUE,
+    question TEXT NOT NULL,
     options TEXT NOT NULL,
 	answer TEXT NOT NULL,
 	expression_id SMALLINT NOT NULL

@@ -14,13 +14,13 @@ def set_handled(mid, timestamp, cur):
 
 def get_question(sender, cur):
     retries.execution_with_backoff(cur, f"""
-        SELECT options, answer, expression_id
+        SELECT question, options, answer, expression_id
         FROM {os.environ["SCHEMA"]}.questions
         WHERE sender = %s
         """, (sender,))
     row = cur.fetchone()
-    options, answer, expression_id = row if row else ("None", None, None)
-    return eval(options), answer, expression_id
+    question, options, answer, expression_id = row if row else (None, "None", None, None)
+    return question, eval(options), answer, expression_id
 
 def get_leitner_system(sender, cur):
     retries.execution_with_backoff(cur, f"""
@@ -39,15 +39,25 @@ def get_system_prompt():
     conn.close()
     return system_prompt
 
-def get_user_message(expression, question):
+def get_expression(expression_id):
+    conn = sqlite3.connect("expressions.db")
+    cur = conn.cursor()
+    cur.execute(f"SELECT expression FROM expressions WHERE id = ?", (expression_id,))
+    expression = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return expression
+
+def get_user_message(question, expression_id):
+    expression = get_expression(expression_id)
     options = repr(question["options"]).replace("'", "\"").replace(" ", "")
     user_message = ("{\"context\":\"%s\",\"question\":\"%s\",\"options\":%s,\"answer\":\"%s\"" % 
         (expression, question["question"], options, question["answer"]))
     return user_message
 
-def get_explanation(expression, question, client):
+def get_explanation(question, expression_id, client):
     system_prompt = get_system_prompt()
-    user_message = get_user_message(expression, question)
+    user_message = get_user_message(question, expression_id)
     explanation = retries.completion_creation_with_backoff(client, system_prompt, user_message, 0)
     return explanation
 

@@ -29,11 +29,11 @@ def process_message(message, cur):
     return (text.to_dict(), button_template.to_dict())
 
 def process_postback(message, cur):
-    options, answer, expression_id = postbacks.get_question(message["sender"]["id"], cur)
+    question, options, answer, expression_id = postbacks.get_question(message["sender"]["id"], cur)
 
     if options and message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-        explanation = postbacks.get_explanation()
+        explanation = postbacks.get_explanation(question, expression_id, client)
         
         if message["postback"]["payload"] == answer:
             response = postbacks.process_correct_response(leitner_system, answer, explanation, expression_id)
@@ -41,10 +41,12 @@ def process_postback(message, cur):
             response = postbacks.process_incorrect_response(leitner_system, answer, explanation, expression_id)
         
         postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
-        text = Text(text=response)
-        return (text.to_dict(),)
     else:
-        return ()
+        response = "Please send a message to get a flashcard"
+    
+    text = Text(text=response)
+
+    return (text.to_dict(),)
 
 class Messenger(BaseMessenger):
     def __init__(self, page_access_token):
