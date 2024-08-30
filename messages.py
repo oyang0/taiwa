@@ -91,10 +91,11 @@ def is_correct(question):
         return False
     return True
 
-# def get_explanation(question, client):
-#     system_prompt = get_system_prompt("explanation_system_prompt")
-#     content = "{"context": "%s", }" % ()
-#     question = retries.completion_creation_with_backoff(client, system_prompt, content, 0)
+def get_explanation(expression, question, client):
+    system_prompt = get_system_prompt("explanation_system_prompt")
+    question = "{\"context\":\"%s\",%s" % (expression, question[1:])
+    explanation = retries.completion_creation_with_backoff(client, system_prompt, question, 0)
+    return explanation
 
 def get_question(expression, client, attempts=6):
     question, attempt = None, 0
@@ -103,12 +104,14 @@ def get_question(expression, client, attempts=6):
 
     while (not question or not is_correct(question)) and attempt < attempts: 
         question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
-        print(f"TEST: {question}")
+        explanation = get_explanation(expression, question, client)
         question = eval(question)
         attempt += 1
     
     if attempt == attempts:
         raise Exception("Failed to create multiple choice question")
+    
+    question["explanation"] = explanation
     
     return question
     
