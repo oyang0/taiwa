@@ -96,7 +96,7 @@ def get_question(expression, client, attempts=6):
     system_prompt, response_format = get_system_prompt(), get_response_format()
 
     while (not question or not is_correct(question)) and attempt < attempts: 
-        question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1.2, response_format)
+        question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
         question = eval(question)
         attempt += 1
     
