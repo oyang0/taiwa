@@ -62,19 +62,19 @@ def get_random_expression(leitner_system, box):
     conn.close()
     return expression_id, expression
 
-def get_system_prompt():
+def get_system_prompt(role):
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
-    cur.execute("SELECT content FROM openai WHERE role='system_prompt'")
+    cur.execute("SELECT content FROM openai WHERE role = ?", (role,))
     system_prompt = cur.fetchone()[0]
     cur.close()
     conn.close()
     return system_prompt
 
-def get_response_format():
+def get_response_format(role):
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
-    cur.execute("SELECT content FROM openai WHERE role='response_format'")
+    cur.execute("SELECT content FROM openai WHERE role = ?", (role,))
     response_format = eval(cur.fetchone()[0].replace("true", "True").replace("false", "False"))
     cur.close()
     conn.close()
@@ -91,12 +91,19 @@ def is_correct(question):
         return False
     return True
 
+# def get_explanation(question, client):
+#     system_prompt = get_system_prompt("explanation_system_prompt")
+#     content = "{"context": "%s", }" % ()
+#     question = retries.completion_creation_with_backoff(client, system_prompt, content, 0)
+
 def get_question(expression, client, attempts=6):
     question, attempt = None, 0
-    system_prompt, response_format = get_system_prompt(), get_response_format()
+    system_prompt = get_system_prompt("question_system_prompt")
+    response_format = get_response_format("question_response_format")
 
     while (not question or not is_correct(question)) and attempt < attempts: 
         question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
+        print(f"TEST: {question}")
         question = eval(question)
         attempt += 1
     
