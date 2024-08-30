@@ -108,7 +108,7 @@ def get_question(expression, client, attempts=6):
 def set_question(question, sender, expression_id, cur):
     retries.execution_with_backoff(cur, f"""
         INSERT INTO {os.environ["SCHEMA"]}.questions (sender, question, options, answer, expression_id)
-        VALUES (%s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (sender)
         DO UPDATE SET
             question = EXCLUDED.question,
