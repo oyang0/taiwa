@@ -36,7 +36,7 @@ def process_correct_response(leitner_system, answer, explanation, expression_id)
             leitner_system[box + 1].add(expression_id)
             break
 
-    response = f"✔️ Correct! The answer is: {answer}\n\n{explanation}"
+    response = f"✔️ Correct! ✔️\n\n{explanation}"
 
     return response
 
@@ -47,7 +47,7 @@ def process_incorrect_response(leitner_system, answer, explanation, expression_i
             leitner_system[box - 1].add(expression_id)
             break
 
-    response = f"❌ Incorrect. The answer is: {answer}\n\n{explanation}"
+    response = f"❌ Incorrect. ❌\n\n{explanation}"
 
     return response
 
