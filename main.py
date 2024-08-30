@@ -18,10 +18,6 @@ collections.Iterable = Iterable
 
 def process_message(message, cur):
     leitner_system = messages.get_leitner_system(message["sender"]["id"], cur)
-
-    if not leitner_system:
-        leitner_system = messages.set_leitner_system(message["sender"]["id"], cur)
-
     box = messages.get_random_box(leitner_system)
     expression_id, expression = messages.get_random_expression(leitner_system, box)
     question = retries.get_question(expression, client)

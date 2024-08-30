@@ -13,15 +13,6 @@ def set_handled(mid, timestamp, cur):
         VALUES (%s, %s)
         """, (mid, timestamp))
 
-def get_leitner_system(sender, cur):
-    retries.execution_with_backoff(cur, f"""
-        SELECT system
-        FROM {os.environ["SCHEMA"]}.leitner
-        WHERE sender = %s""", (sender,))
-    row = cur.fetchone()
-    leitner_system = eval(row[0]) if row else None
-    return leitner_system
-
 def create_leitner_system():
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
@@ -44,6 +35,15 @@ def set_leitner_system(sender, cur):
         VALUES (%s, %s)
         ON CONFLICT (sender) DO NOTHING
         """, (sender, repr(leitner_system)))
+    return leitner_system
+
+def get_leitner_system(sender, cur):
+    retries.execution_with_backoff(cur, f"""
+        SELECT system
+        FROM {os.environ["SCHEMA"]}.leitner
+        WHERE sender = %s""", (sender,))
+    row = cur.fetchone()
+    leitner_system = eval(row[0]) if row else set_leitner_system(sender, cur)
     return leitner_system
 
 def get_random_box(leitner_system):
