@@ -85,7 +85,7 @@ def is_correct(question):
         return False
     elif len(question["options"]) > 3:
         return False
-    elif any([len(option) > 15 for option in question["options"]]):
+    elif any([len(option) > 16 for option in question["options"]]):
         return False
     elif question["answer"] not in question["options"]:
         return False
