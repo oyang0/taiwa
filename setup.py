@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS {os.environ["SCHEMA"]}.questions (
 	sender TEXT NOT NULL UNIQUE,
     options TEXT NOT NULL,
 	answer TEXT NOT NULL,
-	explanation TEXT NOT NULL,
 	expression_id SMALLINT NOT NULL
 )
 """)

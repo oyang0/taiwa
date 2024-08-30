@@ -29,10 +29,11 @@ def process_message(message, cur):
     return (text.to_dict(), button_template.to_dict())
 
 def process_postback(message, cur):
-    options, answer, explanation, expression_id = postbacks.get_question(message["sender"]["id"], cur)
+    options, answer, expression_id = postbacks.get_question(message["sender"]["id"], cur)
 
     if options and message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
+        explanation = postbacks.get_explanation()
         
         if message["postback"]["payload"] == answer:
             response = postbacks.process_correct_response(leitner_system, answer, explanation, expression_id)

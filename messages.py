@@ -62,19 +62,19 @@ def get_random_expression(leitner_system, box):
     conn.close()
     return expression_id, expression
 
-def get_system_prompt(role):
+def get_system_prompt():
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
-    cur.execute("SELECT content FROM openai WHERE role = ?", (role,))
+    cur.execute("SELECT content FROM openai WHERE role='question_system_prompt'")
     system_prompt = cur.fetchone()[0]
     cur.close()
     conn.close()
     return system_prompt
 
-def get_response_format(role):
+def get_response_format():
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
-    cur.execute("SELECT content FROM openai WHERE role = ?", (role,))
+    cur.execute("SELECT content FROM openai WHERE role='question_response_format'")
     response_format = eval(cur.fetchone()[0].replace("true", "True").replace("false", "False"))
     cur.close()
     conn.close()
@@ -91,38 +91,27 @@ def is_correct(question):
         return False
     return True
 
-def get_explanation(expression, question, client):
-    system_prompt = get_system_prompt("explanation_system_prompt")
-    question = "{\"context\":\"%s\",%s" % (expression, question[1:])
-    explanation = retries.completion_creation_with_backoff(client, system_prompt, question, 0)
-    return explanation
-
 def get_question(expression, client, attempts=6):
     question, attempt = None, 0
-    system_prompt = get_system_prompt("question_system_prompt")
-    response_format = get_response_format("question_response_format")
+    system_prompt, response_format = get_system_prompt(), get_response_format()
 
     while (not question or not is_correct(question)) and attempt < attempts: 
         question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
-        explanation = get_explanation(expression, question, client)
         question = eval(question)
         attempt += 1
     
     if attempt == attempts:
         raise Exception("Failed to create multiple choice question")
     
-    question["explanation"] = explanation
-    
     return question
     
 def set_question(question, sender, expression_id, cur):
     retries.execution_with_backoff(cur, f"""
-        INSERT INTO {os.environ["SCHEMA"]}.questions (sender, options, answer, explanation, expression_id)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO {os.environ["SCHEMA"]}.questions (sender, options, answer, expression_id)
+        VALUES (%s, %s, %s, %s)
         ON CONFLICT (sender)
         DO UPDATE SET
             options = EXCLUDED.options,
             answer = EXCLUDED.answer,
-            explanation = EXCLUDED.explanation,
             expression_id = EXCLUDED.expression_id
-        """, (sender, repr(question["options"]), question["answer"], question["explanation"], expression_id))
+        """, (sender, repr(question["options"]), question["answer"], expression_id))
