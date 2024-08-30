@@ -64,16 +64,21 @@ class Messenger(BaseMessenger):
             try:
                 messages.set_handled(mid, message["timestamp"], cur)
                 retries.commit_with_backoff(conn)
-                
-                try:
-                    if commands.is_command(message["message"]):
-                        actions = commands.process_command(message, cur)
-                    else:
-                        actions = process_message(message, cur)
 
-                    retries.commit_with_backoff(conn)
-                except Exception as exception:
-                    actions = exceptions.process_exception(exception)
+                if commands.is_command(message["message"]):
+                    actions = commands.process_command(message, cur)
+                else:
+                    actions = process_message(message, cur)
+                
+                # try:
+                #     if commands.is_command(message["message"]):
+                #         actions = commands.process_command(message, cur)
+                #     else:
+                #         actions = process_message(message, cur)
+
+                #     retries.commit_with_backoff(conn)
+                # except Exception as exception:
+                #     actions = exceptions.process_exception(exception)
 
                 for action in actions:
                     res = self.send(action, "RESPONSE")
