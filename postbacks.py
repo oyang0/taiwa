@@ -5,6 +5,12 @@ def is_handled(mid, cur):
     retries.execution_with_backoff(cur, f"SELECT 1 FROM {os.environ["SCHEMA"]}.messages WHERE message = %s", (mid,))
     return True if cur.fetchone() else False
 
+def set_handled(mid, timestamp, cur):
+    retries.execution_with_backoff(cur, f"""
+        INSERT INTO {os.environ["SCHEMA"]}.messages (message, timestamp)
+        VALUES (%s, %s)
+        """, (mid, timestamp))
+
 def get_question(sender, cur):
     retries.execution_with_backoff(cur, f"""
         SELECT options, answer, explanation, expression_id
