@@ -78,3 +78,5 @@ def get_question(expression, client):
     
     if attempt == attempts:
         raise Exception("Failed to create multiple choice question")
+    
+    return question
