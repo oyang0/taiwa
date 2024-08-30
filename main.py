@@ -24,7 +24,7 @@ def process_message(message, cur):
 
     box = messages.get_random_box(leitner_system)
     expression_id, expression = messages.get_random_expression(leitner_system, box)
-    question = messages.get_question(expression, client)
+    question = retries.get_question(expression, client)
     messages.set_question(question, message["sender"]["id"], expression_id, cur)
     text = Text(text=expression)
     random.shuffle(question["options"])

@@ -1,7 +1,8 @@
+import messages
 import os
 import psycopg2
 
-from tenacity import retry, stop_after_attempt, wait_random_exponential, RetryError, retry_if_not_exception_type
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), reraise=True)
 def connection_with_backoff():
@@ -56,3 +57,24 @@ def completion_creation_with_backoff(client, system_prompt, content, temperature
         response_format=response_format
     )
     return response.choices[0].message.content
+
+def is_correct(question):
+    if len(question) > 640:
+        return False
+    elif len(question["options"]) > 3:
+        return False
+    elif any([len(option) > 20 for option in question["options"]]):
+        return False
+    elif question["answer"] not in question["options"]:
+        return False
+    return True
+
+def get_question(expression, client):
+    question, attempt, attempts = None, 0, 6
+
+    while (not question or not messages.is_correct(question)) and attempt < attempts: 
+        question = messages.get_question(expression, client)
+        attempt += 1
+    
+    if attempt == attempts:
+        raise Exception("Failed to create multiple choice question")
