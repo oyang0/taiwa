@@ -75,7 +75,7 @@ def get_response_format():
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
     cur.execute("SELECT content FROM openai WHERE role='response_format'")
-    response_format = repr(cur.fetchone()[0].replace("true", "True").replace("false", "False"))
+    response_format = eval(cur.fetchone()[0].replace("true", "True").replace("false", "False"))
     cur.close()
     conn.close()
     return response_format
