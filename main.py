@@ -33,7 +33,7 @@ def process_postback(message, cur):
 
     if options and message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-        explanation = postbacks.get_explanation(question, expression_id, client)
+        explanation = postbacks.get_explanation(question, options, answer, expression_id, client)
         
         if message["postback"]["payload"] == answer:
             response = postbacks.process_correct_response(leitner_system, answer, explanation, expression_id)
