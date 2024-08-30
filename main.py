@@ -8,56 +8,46 @@ import random
 import retries
 
 from collections.abc import Iterable
-from contextlib import suppress
 from flask import Flask, request
 from fbmessenger import BaseMessenger
 from fbmessenger.elements import Text, Button
 from fbmessenger.templates import ButtonTemplate
 from openai import OpenAI
-from tenacity import RetryError
 
 collections.Iterable = Iterable
 
-def process_message(message):
-    conn, cur = retries.get_connection_and_cursor_with_backoff()
+def process_message(message, cur):
     leitner_system = messages.get_leitner_system(message["sender"]["id"], cur)
+
+    if not leitner_system:
+        leitner_system = messages.set_leitner_system(message["sender"]["id"], cur)
+
     box = messages.get_random_box(leitner_system)
-    id, expression = messages.get_random_expression(leitner_system, box)
-    thread = retries.thread_creation_with_backoff(client)
-    retries.message_creation_with_backoff(client, thread, expression)
-    question = retries.get_question_with_backoff(client, thread)
-
-    with suppress(RetryError):
-        retries.thread_deletion_with_backoff(client, thread)
-
+    expression_id, expression = messages.get_random_expression(leitner_system, box)
+    question = messages.get_question(expression, client)
+    messages.set_question(question, message["sender"]["id"], expression_id, cur)
     text = Text(text=expression)
     random.shuffle(question["options"])
     buttons = [Button("postback", title=option, payload=option) for option in question["options"]]
     button_template = ButtonTemplate(text=question["question"], buttons=buttons)
-    responses = [text.to_dict(), button_template.to_dict()]
-    messages.set_question(message["sender"]["id"], question["answer"], question["options"], id, cur)
-    retries.commit_with_backoff(conn)
-    retries.close_cursor_and_connection_with_backoff(cur, conn)
+    return (text.to_dict(), button_template.to_dict())
 
-    return responses
-
-def process_postback(message):
-    conn, cur = retries.get_connection_and_cursor_with_backoff()
-    answer, options, id = postbacks.get_question(message["sender"]["id"], cur)
+def process_postback(message, cur):
+    options, answer, explanation, expression_id = postbacks.get_question(message["sender"]["id"], cur)
 
     if options and message["postback"]["payload"] in options:
         leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-        responses = (postbacks.process_correct_response(leitner_system, answer, id) if
-                    message["postback"]["payload"] == answer else
-                    postbacks.process_incorrect_response(leitner_system, answer, id))
+        
+        if message["postback"]["payload"] == answer:
+            response = postbacks.process_correct_response(leitner_system, answer, explanation, expression_id)
+        else:
+            response = postbacks.process_incorrect_response(leitner_system, answer, explanation, expression_id)
+        
         postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
-        retries.commit_with_backoff(conn)
+        text = Text(text=response)
+        return (text.to_dict(),)
     else:
-        responses = []
-
-    retries.close_cursor_and_connection_with_backoff(cur, conn)
-
-    return responses
+        return ()
 
 class Messenger(BaseMessenger):
     def __init__(self, page_access_token):
@@ -66,35 +56,61 @@ class Messenger(BaseMessenger):
 
     def message(self, message):
         app.logger.debug(f"Message received: {message}")
+        conn, cur = retries.get_connection_and_cursor_with_backoff()
+        mid = message["message"]["mid"]
         self.send_action("mark_seen")
         self.send_action("typing_on")
 
-        try:
-            actions = commands.process_command(message) if commands.is_command(message) else process_message(message)
-        except Exception as exception:
-            actions = exceptions.process_exception(exception)
+        if not messages.is_handled(mid, cur):
+            try:
+                messages.set_handled(mid, message["timestamp"], cur)
+                retries.commit_with_backoff(conn)
+                
+                try:
+                    if commands.is_command(message["message"]):
+                        actions = commands.process_command(message, cur)
+                    else:
+                        actions = process_message(message)
 
-        for action in actions:
-            res = self.send(action, "RESPONSE")
-            app.logger.debug(f"Message sent: {action}")
-            app.logger.debug(f"Response: {res}")
+                    retries.commit_with_backoff(conn)
+                except Exception as exception:
+                    actions = exceptions.process_exception(exception)
+
+                for action in actions:
+                    res = self.send(action, "RESPONSE")
+                    app.logger.debug(f"Message sent: {action}")
+                    app.logger.debug(f"Response: {res}")
+            except:
+                app.logger.debug(f"Not handled: {mid}")
+            
+            self.send_action("typing_off")
         
-        self.send_action("typing_off")
+        retries.close_cursor_and_connection_with_backoff(cur, conn)
     
     def postback(self, message):
         app.logger.debug(f"Message received: {message}")
+        conn, cur = retries.get_connection_and_cursor_with_backoff()
+        mid = message["postback"]["mid"]
         self.send_action("mark_seen")
         self.send_action("typing_on")
 
-        try:
-            actions = process_postback(message)
-        except Exception as exception:
-            actions = exceptions.process_exception(exception)
+        if not postbacks.is_handled(mid, cur):
+            try:
+                postbacks.set_handled(mid, message["timestamp"], cur)
+                retries.commit_with_backoff(conn)
 
-        for action in actions:
-            res = self.send(action, "RESPONSE")
-            app.logger.debug(f"Message sent: {action}")
-            app.logger.debug(f"Response: {res}")
+                try:
+                    actions = process_postback(message)
+                    retries.commit_with_backoff(conn)
+                except Exception as exception:
+                    actions = exceptions.process_exception(exception)
+
+                for action in actions:
+                    res = self.send(action, "RESPONSE")
+                    app.logger.debug(f"Message sent: {action}")
+                    app.logger.debug(f"Response: {res}")
+            except:
+                app.logger.debug(f"Not handled: {mid}")
 
         self.send_action("typing_off")
     

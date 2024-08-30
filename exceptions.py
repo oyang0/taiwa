@@ -10,5 +10,5 @@ def process_exception(exception):
     exception = exception.replace(os.environ["FB_VERIFY_TOKEN"], "?")
     exception = exception.replace(os.environ["OPENAI_API_KEY"], "?")
     exception = exception.replace(os.environ["SCHEMA"], "?")
-    responses = [Text(text=exception).to_dict()]
-    return responses
+    text = Text(text=exception)
+    return (text.to_dict(),)

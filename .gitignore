@@ -185,3 +185,4 @@ openai_api_key.txt
 # By ignoring this file, you keep your repository clean, reduce its size, and avoid potential
 # security issues, while ensuring that only the essential code and resources are tracked.
 ngrok.exe
+.ngrok.exe.old

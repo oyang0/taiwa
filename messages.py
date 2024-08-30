@@ -3,15 +3,34 @@ import random
 import retries
 import sqlite3
 
+def is_handled(mid, cur):
+    retries.execution_with_backoff(cur, f"SELECT 1 FROM {os.environ["SCHEMA"]}.messages WHERE message = %s", (mid,))
+    return True if cur.fetchone() else False
+
+def set_handled(mid, timestamp, cur):
+    retries.execution_with_backoff(cur, f"""
+        INSERT INTO {os.environ["SCHEMA"]}.messages (message, timestamp)
+        VALUES (%s, %s)
+        """, (mid, timestamp))
+
+def get_leitner_system(sender, cur):
+    retries.execution_with_backoff(cur, f"""
+        SELECT system
+        FROM {os.environ["SCHEMA"]}.leitner
+        WHERE sender = %s""", (sender,))
+    row = cur.fetchone()
+    leitner_system = eval(row[0]) if row else None
+    return leitner_system
+
 def create_leitner_system():
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
-    cur.execute("SELECT DISTINCT type FROM expressions")
+    cur.execute("SELECT type FROM types")
     leitner_system = {box: set() for box in [type for row in cur.fetchall() for type in row]}
     cur.execute("SELECT id, type FROM expressions")
 
-    for id, type in cur.fetchall():
-        leitner_system[type].add(id)
+    for expression_id, type in cur.fetchall():
+        leitner_system[type].add(expression_id)
 
     cur.close()
     conn.close()
@@ -20,22 +39,11 @@ def create_leitner_system():
 
 def set_leitner_system(sender, cur):
     leitner_system = create_leitner_system()
-    retries.execution_with_backoff(
-        cur, f"""
+    retries.execution_with_backoff(cur, f"""
         INSERT INTO {os.environ["SCHEMA"]}.leitner (sender, system)
         VALUES (%s, %s)
         ON CONFLICT (sender) DO NOTHING
         """, (sender, repr(leitner_system)))
-    return leitner_system
-
-def get_leitner_system(sender, cur):
-    retries.execution_with_backoff(
-        cur, f"""
-        SELECT system
-        FROM {os.environ["SCHEMA"]}.leitner
-        WHERE sender = %s""", (sender,))
-    row = cur.fetchone()
-    leitner_system = eval(row[0]) if row else set_leitner_system(sender, cur)
     return leitner_system
 
 def get_random_box(leitner_system):
@@ -47,21 +55,45 @@ def get_random_box(leitner_system):
 def get_random_expression(leitner_system, box):
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
-    id = random.choice(sorted(leitner_system[box]))
-    cur.execute(f"SELECT expression FROM expressions WHERE id = ?", (id,))
+    expression_id = random.choice([expression_id for expression_id in leitner_system[box]])
+    cur.execute(f"SELECT expression FROM expressions WHERE id = ?", (expression_id,))
     expression = cur.fetchone()[0]
     cur.close()
     conn.close()
-    return id, expression
+    return expression_id, expression
 
-def set_question(sender, answer, options, id, cur):
-    retries.execution_with_backoff(
-        cur, f"""
-        INSERT INTO {os.environ["SCHEMA"]}.answers (sender, answer, options, expression_id)
-        VALUES (%s, %s, %s, %s)
+def get_system_prompt():
+    conn = sqlite3.connect("expressions.db")
+    cur = conn.cursor()
+    cur.execute("SELECT content FROM openai WHERE role='system_prompt'")
+    system_prompt = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return system_prompt
+
+def get_response_format():
+    conn = sqlite3.connect("expressions.db")
+    cur = conn.cursor()
+    cur.execute("SELECT content FROM openai WHERE role='response_format'")
+    response_format = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return response_format
+
+def get_question(expression, client):
+    system_prompt = get_system_prompt()
+    response_format = get_response_format()
+    question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1.2, response_format)
+    return eval(question)
+    
+def set_question(question, sender, expression_id, cur):
+    retries.execution_with_backoff(cur, f"""
+        INSERT INTO {os.environ["SCHEMA"]}.questions (sender, options, answer, explanation, expression_id)
+        VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (sender)
         DO UPDATE SET
-            answer = EXCLUDED.answer,
             options = EXCLUDED.options,
+            answer = EXCLUDED.answer,
+            explanation = EXCLUDED.explanation,
             expression_id = EXCLUDED.expression_id
-        """, (sender, answer, repr(options), id))
+        """, (sender, repr(question["options"]), question["answer"], question["explanation"], expression_id))

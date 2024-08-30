@@ -13,22 +13,19 @@ def set_commands():
     return response
 
 def is_command(message):
-    return ("text" in message["message"] and 
-            any([command["name"] in message["message"]["text"] for command in commands]))
+    return "text" in message and any([command["name"] in message["text"] for command in commands])
 
 def delete_conversation(message, cur):
-    retries.execution_with_backoff(
-        cur, f"""
+    retries.execution_with_backoff(cur, f"""
         DELETE FROM {os.environ["SCHEMA"]}.leitner
         WHERE sender = %s
         """, (message["sender"]["id"],))
-    retries.execution_with_backoff(
-        cur, f"""
+    retries.execution_with_backoff(cur, f"""
         DELETE FROM {os.environ["SCHEMA"]}.answers
         WHERE sender = %s
         """, (message["sender"]["id"],))
-    responses = [Text(text="Conversation deleted").to_dict()]
-    return responses
+    response = "Conversation deleted"
+    return response
 
 def report_technical_problem(message, cur):
     retries.execution_with_backoff(
@@ -36,17 +33,15 @@ def report_technical_problem(message, cur):
         INSERT INTO {os.environ["SCHEMA"]}.problems (sender, problem)
         VALUES (%s, %s)
         """, (message["sender"]["id"], message["message"]["text"]))
-    responses = [Text(text="Technical problem reported").to_dict()]
-    return responses
+    response = "Technical problem reported"
+    return response
 
-def process_command(message):
-    conn, cur = retries.get_connection_and_cursor_with_backoff()
+def process_command(message, cur):
     indices = {message["message"]["text"].find(command["name"]): command["function"] for command in commands}
-    indices.pop(-1, None)
-    responses = indices[min(indices)](message, cur)
-    retries.commit_with_backoff(conn)
-    retries.close_cursor_and_connection_with_backoff(cur, conn)
-    return responses
+    indices = {index: function for index, function in indices.items() if index != -1}
+    response = indices[min(indices)](message, cur)
+    response = Text(text=response)
+    return (response.to_dict(),)
 
 commands = [{"name": "delete",
              "description": "Delete this entire conversation",
