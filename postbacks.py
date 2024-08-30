@@ -50,7 +50,7 @@ def get_expression(expression_id):
 
 def get_user_message(question, options, answer, expression_id):
     expression = get_expression(expression_id)
-    options = repr(question["options"]).replace("'", "\"").replace(" ", "")
+    options = repr(options).replace("'", "\"").replace(" ", "")
     user_message = ("{\"context\":\"%s\",\"question\":\"%s\",\"options\":%s,\"answer\":\"%s\"" % 
         (expression, question, options, answer))
     return user_message
