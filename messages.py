@@ -80,9 +80,30 @@ def get_response_format():
     conn.close()
     return response_format
 
-def get_question(expression, client):
-    question = retries.completion_creation_with_backoff(client, get_system_prompt(), expression, 1.2, get_response_format())
-    return eval(question)
+def is_correct(question):
+    if len(question) > 640:
+        return False
+    elif len(question["options"]) > 3:
+        return False
+    elif any([len(option) > 15 for option in question["options"]]):
+        return False
+    elif question["answer"] not in question["options"]:
+        return False
+    return True
+
+def get_question(expression, client, attempts=6):
+    question, attempt = None, 0
+    system_prompt, response_format = get_system_prompt(), get_response_format()
+
+    while (not question or not is_correct(question)) and attempt < attempts: 
+        question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1.2, response_format)
+        question = eval(question)
+        attempt += 1
+    
+    if attempt == attempts:
+        raise Exception("Failed to create multiple choice question")
+    
+    return question
     
 def set_question(question, sender, expression_id, cur):
     retries.execution_with_backoff(cur, f"""
