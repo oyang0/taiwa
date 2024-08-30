@@ -70,7 +70,7 @@ class Messenger(BaseMessenger):
                     if commands.is_command(message["message"]):
                         actions = commands.process_command(message, cur)
                     else:
-                        actions = process_message(message)
+                        actions = process_message(message, cur)
 
                     retries.commit_with_backoff(conn)
                 except Exception as exception:
@@ -100,7 +100,7 @@ class Messenger(BaseMessenger):
                 retries.commit_with_backoff(conn)
 
                 try:
-                    actions = process_postback(message)
+                    actions = process_postback(message, cur)
                     retries.commit_with_backoff(conn)
                 except Exception as exception:
                     actions = exceptions.process_exception(exception)
