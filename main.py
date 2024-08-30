@@ -65,10 +65,9 @@ class Messenger(BaseMessenger):
                 messages.set_handled(mid, message["timestamp"], cur)
                 retries.commit_with_backoff(conn)
 
-                if commands.is_command(message["message"]):
-                    actions = commands.process_command(message, cur)
-                else:
-                    actions = process_message(message, cur)
+                print("TEST #1")
+                actions = process_message(message, cur)
+                print("TEST #2")
                 
                 # try:
                 #     if commands.is_command(message["message"]):
