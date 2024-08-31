@@ -8,11 +8,6 @@ cur = conn.cursor()
 
 cur.execute(f"CREATE SCHEMA IF NOT EXISTS {os.environ["SCHEMA"]};")
 
-cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.leitner")
-cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.questions")
-cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.problems")
-cur.execute(f"DROP TABLE IF EXISTS {os.environ["SCHEMA"]}.messages")
-
 cur.execute(f"""
 CREATE TABLE IF NOT EXISTS {os.environ["SCHEMA"]}.leitner (
 	id SERIAL PRIMARY KEY,
