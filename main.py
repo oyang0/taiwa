@@ -17,35 +17,26 @@ from openai import OpenAI
 collections.Iterable = Iterable
 
 def process_message(message, cur):
-    leitner_system = messages.get_leitner_system(message["sender"]["id"], cur)
+    sender = message["sender"]["id"]
+    leitner_system = messages.get_leitner_system(sender, cur)
     box = messages.get_random_box(leitner_system)
     expression_id, expression = messages.get_random_expression(leitner_system, box)
-    question = messages.get_multiple_choice_question(expression, expression_id, message["sender"]["id"], cur, client)
+    question = messages.get_multiple_choice_question(expression, expression_id, sender, cur, client)
+    question, options = question["question"], question["options"]
     text = Text(text=expression)
-    random.shuffle(question["options"])
-    buttons = [Button("postback", title=chr(97 + i), payload=option) for i, option in enumerate(question["options"])]
-    question["question"] = messages.update_multiple_choice_question(question["question"], question["options"])
-    button_template = ButtonTemplate(text=question["question"], buttons=buttons)
+    random.shuffle(options)
+    buttons = [Button("postback", title=chr(97 + i), payload=option) for i, option in enumerate(options)]
+    question = messages.update_multiple_choice_question(question, options)
+    button_template = ButtonTemplate(text=question, buttons=buttons)
     return (text.to_dict(), button_template.to_dict())
 
-def process_postback(message, cur):
-    question, options, answer, expression_id = postbacks.get_question(message["sender"]["id"], cur)
-
-    if options and message["postback"]["payload"] in options:
-        leitner_system = postbacks.get_leitner_system(message["sender"]["id"], cur)
-        explanation = postbacks.get_explanation(question, options, answer, expression_id, client)
-        
-        if message["postback"]["payload"] == answer:
-            response = postbacks.process_correct_response(leitner_system, answer, explanation, expression_id)
-        else:
-            response = postbacks.process_incorrect_response(leitner_system, answer, explanation, expression_id)
-        
-        postbacks.set_leitner_system(leitner_system, message["sender"]["id"], cur)
-    else:
-        response = "Please send a message to get a flashcard"
-    
+def process_postback(message, options, cur):
+    sender, payload = message["sender"]["id"], message["postback"]["payload"]
+    question, answer, expression_id = postbacks.get_question(sender, cur)
+    leitner_system = postbacks.get_leitner_system(sender, cur)
+    explanation = postbacks.get_explanation(question, options, answer, expression_id, client)
+    response = postbacks.process_answer(answer, payload, leitner_system, explanation, expression_id, sender, cur)
     text = Text(text=response)
-
     return (text.to_dict(),)
 
 class Messenger(BaseMessenger):
@@ -56,16 +47,16 @@ class Messenger(BaseMessenger):
     def message(self, message):
         app.logger.debug(f"Message received: {message}")
         conn, cur = retries.get_connection_and_cursor_with_backoff()
-        mid = message["message"]["mid"]
         self.send_action("mark_seen")
-        self.send_action("typing_on")
 
-        if not messages.is_handled(mid, cur):
+        if not messages.is_handled(message["message"]["mid"], cur):
             try:
-                messages.set_handled(mid, message["timestamp"], cur)
+                messages.set_handled(message["message"]["mid"], message["timestamp"], cur)
                 retries.commit_with_backoff(conn)
                 
                 try:
+                    self.send_action("typing_on")
+
                     if commands.is_command(message["message"]):
                         actions = commands.process_command(message, cur)
                     else:
@@ -79,27 +70,31 @@ class Messenger(BaseMessenger):
                     res = self.send(action, "RESPONSE")
                     app.logger.debug(f"Message sent: {action}")
                     app.logger.debug(f"Response: {res}")
+                
+                self.send_action("typing_off")
             except:
-                app.logger.debug(f"Not handled: {mid}")
-
-        self.send_action("typing_off")
+                app.logger.debug(f"Not handled: {message["message"]["mid"]}")
+        
         retries.close_cursor_and_connection_with_backoff(cur, conn)
     
     def postback(self, message):
         app.logger.debug(f"Message received: {message}")
         conn, cur = retries.get_connection_and_cursor_with_backoff()
-        mid = message["postback"]["mid"]
         self.send_action("mark_seen")
-        self.send_action("typing_on")
 
-        if not postbacks.is_handled(mid, cur):
+        if not postbacks.is_handled(message["postback"]["mid"], cur):
             try:
-                postbacks.set_handled(mid, message["timestamp"], cur)
+                postbacks.set_handled(message["postback"]["mid"], message["timestamp"], cur)
                 retries.commit_with_backoff(conn)
 
                 try:
-                    actions = process_postback(message, cur)
-                    retries.commit_with_backoff(conn)
+                    options = postbacks.get_options(message["sender"]["id"], cur)
+                    if options and message["postback"]["payload"] in options:
+                        self.send_action("typing_on")
+                        actions = process_postback(message, options, cur)
+                        retries.commit_with_backoff(conn)
+                    else:
+                        actions = ()
                 except Exception as exception:
                     actions = exceptions.process_exception(exception)
 
@@ -107,10 +102,12 @@ class Messenger(BaseMessenger):
                     res = self.send(action, "RESPONSE")
                     app.logger.debug(f"Message sent: {action}")
                     app.logger.debug(f"Response: {res}")
+                
+                self.send_action("typing_off")
             except:
-                app.logger.debug(f"Not handled: {mid}")
+                app.logger.debug(f"Not handled: {message["postback"]["mid"]}")
         
-        self.send_action("typing_off")
+        retries.close_cursor_and_connection_with_backoff(cur, conn)
     
     def init_bot(self):
         self.add_whitelisted_domains("https://facebook.com/")

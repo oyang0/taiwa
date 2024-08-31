@@ -80,8 +80,17 @@ def get_response_format():
     conn.close()
     return response_format
 
+def update_multiple_choice_question(question, options):
+    return f"{question}\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"
+
 def is_correct(question):
-    return len(question) <= 640 and len(question["options"]) <= 3 and question["answer"] in question["options"]
+    if len(update_multiple_choice_question(question["question"], question["options"])) > 640:
+        return False
+    elif len(question["options"]) > 3:
+        return False
+    elif question["answer"] not in question["options"]:
+        return False
+    return True
 
 def set_multiple_choice_question(question, sender, expression_id, cur):
     retries.execution_with_backoff(cur, f"""
@@ -109,6 +118,3 @@ def get_multiple_choice_question(expression, expression_id, sender, cur, client,
         set_multiple_choice_question(question, sender, expression_id, cur)
     
     return question
-
-def update_multiple_choice_question(question, options):
-    return f"{question}\n\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"

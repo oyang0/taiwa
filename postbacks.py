@@ -11,16 +11,25 @@ def set_handled(mid, timestamp, cur):
         INSERT INTO {os.environ["SCHEMA"]}.messages (message, timestamp)
         VALUES (%s, %s)
         """, (mid, timestamp))
-
-def get_question(sender, cur):
+    
+def get_options(sender, cur):
     retries.execution_with_backoff(cur, f"""
-        SELECT question, options, answer, expression_id
+        SELECT options
         FROM {os.environ["SCHEMA"]}.questions
         WHERE sender = %s
         """, (sender,))
     row = cur.fetchone()
-    question, options, answer, expression_id = row if row else (None, "None", None, None)
-    return question, eval(options), answer, expression_id
+    options = eval(row[0]) if row else None
+    return options
+
+def get_question(sender, cur):
+    retries.execution_with_backoff(cur, f"""
+        SELECT question, answer, expression_id
+        FROM {os.environ["SCHEMA"]}.questions
+        WHERE sender = %s
+        """, (sender,))
+    question, answer, expression_id = cur.fetchone()
+    return question, answer, expression_id
 
 def get_leitner_system(sender, cur):
     retries.execution_with_backoff(cur, f"""
@@ -61,7 +70,7 @@ def get_explanation(question, options, answer, expression_id, client):
     explanation = retries.completion_creation_with_backoff(client, system_prompt, user_message, 0)
     return explanation
 
-def process_correct_response(leitner_system, answer, explanation, expression_id):
+def process_correct_answer(leitner_system, explanation, expression_id):
     for box in leitner_system:
         if expression_id in leitner_system[box] and box + 1 in leitner_system:
             leitner_system[box].remove(expression_id)
@@ -72,7 +81,7 @@ def process_correct_response(leitner_system, answer, explanation, expression_id)
 
     return response
 
-def process_incorrect_response(leitner_system, answer, explanation, expression_id):
+def process_incorrect_answer(leitner_system, explanation, expression_id):
     for box in leitner_system:
         if expression_id in leitner_system[box] and box - 1 in leitner_system:
             leitner_system[box].remove(expression_id)
@@ -90,3 +99,13 @@ def set_leitner_system(leitner_system, sender, cur):
         SET system = %s
         WHERE sender = %s
         """, (repr(leitner_system), sender))
+
+def process_answer(answer, payload, leitner_system, explanation, expression_id, sender, cur):
+    if answer == payload:
+        response = process_correct_answer(leitner_system, explanation, expression_id)
+    else:
+        response = process_incorrect_answer(leitner_system, explanation, expression_id)
+    
+    set_leitner_system(leitner_system, sender, cur)
+    
+    return response
