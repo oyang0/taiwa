@@ -20,11 +20,11 @@ def process_message(message, cur):
     leitner_system = messages.get_leitner_system(message["sender"]["id"], cur)
     box = messages.get_random_box(leitner_system)
     expression_id, expression = messages.get_random_expression(leitner_system, box)
-    question = messages.get_question(expression, client)
-    messages.set_question(question, message["sender"]["id"], expression_id, cur)
+    question = messages.get_multiple_choice_question(expression, expression_id, message["sender"]["id"], cur, client)
     text = Text(text=expression)
     random.shuffle(question["options"])
-    buttons = [Button("postback", title=option, payload=option) for option in question["options"]]
+    buttons = [Button("postback", title=chr(97 + i), payload=option) for i, option in enumerate(question["options"])]
+    question["question"] = messages.update_multiple_choice_question(question["question"], question["options"])
     button_template = ButtonTemplate(text=question["question"], buttons=buttons)
     return (text.to_dict(), button_template.to_dict())
 
