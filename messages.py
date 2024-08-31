@@ -110,7 +110,8 @@ def get_multiple_choice_question(expression, expression_id, sender, cur, client,
 
     while (not question or not is_correct(question)) and attempt < attempts: 
         questions = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
-        question = eval(questions)[-1]
+        print(f"TEST: {eval(questions)}")
+        question = eval(questions)[0]
         attempt += 1
     
     if attempt == attempts:
