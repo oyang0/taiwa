@@ -30,9 +30,9 @@ def process_message(message, cur):
     button_template = ButtonTemplate(text=question, buttons=buttons)
     return (text.to_dict(), button_template.to_dict())
 
-def process_postback(message, options, cur):
+def process_postback(message, cur):
     sender, payload = message["sender"]["id"], message["postback"]["payload"]
-    question, answer, expression_id = postbacks.get_question(sender, cur)
+    question, options, answer, expression_id = postbacks.get_question(sender, cur)
     leitner_system = postbacks.get_leitner_system(sender, cur)
     explanation = postbacks.get_explanation(question, options, answer, expression_id, client)
     response = postbacks.process_answer(answer, payload, leitner_system, explanation, expression_id, sender, cur)
@@ -88,11 +88,13 @@ class Messenger(BaseMessenger):
                 retries.commit_with_backoff(conn)
 
                 try:
-                    options = postbacks.get_options(message["sender"]["id"], cur)
-                    if options and message["postback"]["payload"] in options:
-                        self.send_action("typing_on")
-                        actions = process_postback(message, options, cur)
-                        retries.commit_with_backoff(conn)
+                    if postbacks.is_options(message["sender"]["id"]):
+                        options = postbacks.get_options(message["sender"]["id"], cur)
+
+                        if message["postback"]["payload"] in options:
+                            self.send_action("typing_on")
+                            actions = process_postback(message, cur)
+                            retries.commit_with_backoff(conn)
                     else:
                         actions = ()
                 except Exception as exception:

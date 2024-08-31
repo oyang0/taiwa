@@ -12,24 +12,31 @@ def set_handled(mid, timestamp, cur):
         VALUES (%s, %s)
         """, (mid, timestamp))
     
+def is_options(sender, cur):
+    retries.execution_with_backoff(cur, f"""
+        SELECT 1
+        FROM {os.environ["SCHEMA"]}.questions
+        WHERE sender = %s
+        """, (sender,))
+    return True if cur.fetchone() else False
+    
 def get_options(sender, cur):
     retries.execution_with_backoff(cur, f"""
         SELECT options
         FROM {os.environ["SCHEMA"]}.questions
         WHERE sender = %s
         """, (sender,))
-    row = cur.fetchone()
-    options = eval(row[0]) if row else None
+    options = eval(cur.fetchone()[0])
     return options
 
 def get_question(sender, cur):
     retries.execution_with_backoff(cur, f"""
-        SELECT question, answer, expression_id
+        SELECT question, options, answer, expression_id
         FROM {os.environ["SCHEMA"]}.questions
         WHERE sender = %s
         """, (sender,))
-    question, answer, expression_id = cur.fetchone()
-    return question, answer, expression_id
+    question, options, answer, expression_id = cur.fetchone()
+    return question, eval(options), answer, expression_id
 
 def get_leitner_system(sender, cur):
     retries.execution_with_backoff(cur, f"""
@@ -57,17 +64,20 @@ def get_expression(expression_id):
     conn.close()
     return expression
 
-def get_user_message(question, options, answer, expression_id):
+def get_explanation_content(question, options, answer, expression_id):
     expression = get_expression(expression_id)
     options = repr(options).replace("'", "\"").replace(" ", "")
-    user_message = ("{\"context\":\"%s\",\"question\":\"%s\",\"options\":%s,\"answer\":\"%s\"" % 
-        (expression, question, options, answer))
-    return user_message
+    context = f"\"context\":\"{expression}\""
+    question = f"\"question\":\"{question}\""
+    options = f"\"question\":{options}"
+    answer = f"\"question\":\"{answer}\""
+    explanation_content = "{%s,%s,%s,%s}" % (context, question, options, answer)
+    return explanation_content
 
 def get_explanation(question, options, answer, expression_id, client):
     system_prompt = get_system_prompt()
-    user_message = get_user_message(question, options, answer, expression_id)
-    explanation = retries.completion_creation_with_backoff(client, system_prompt, user_message, 0)
+    explanation_content = get_explanation_content(question, options, answer, expression_id)
+    explanation = retries.completion_creation_with_backoff(client, system_prompt, explanation_content, 0)
     return explanation
 
 def process_correct_answer(leitner_system, explanation, expression_id):

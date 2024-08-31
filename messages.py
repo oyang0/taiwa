@@ -93,6 +93,7 @@ def is_correct(question):
     return True
 
 def set_multiple_choice_question(question, sender, expression_id, cur):
+    question, options, answer = question["question"], repr(question["options"]), question["answer"]
     retries.execution_with_backoff(cur, f"""
         INSERT INTO {os.environ["SCHEMA"]}.questions (sender, question, options, answer, expression_id)
         VALUES (%s, %s, %s, %s, %s)
@@ -102,19 +103,19 @@ def set_multiple_choice_question(question, sender, expression_id, cur):
             options = EXCLUDED.options,
             answer = EXCLUDED.answer,
             expression_id = EXCLUDED.expression_id
-        """, (sender, question["question"], repr(question["options"]), question["answer"], expression_id))
+        """, (sender, question, options, answer, expression_id))
 
 def get_multiple_choice_question(expression, expression_id, sender, cur, client, attempts=6):
     question, attempt, system_prompt, response_format = None, 0, get_system_prompt(), get_response_format()
 
     while (not question or not is_correct(question)) and attempt < attempts: 
-        question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
-        question = eval(question)
+        questions = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
+        question = eval(questions)[-1]
         attempt += 1
     
     if attempt == attempts:
         raise Exception("Failed to create multiple choice question")
-    else:
-        set_multiple_choice_question(question, sender, expression_id, cur)
+    
+    set_multiple_choice_question(question, sender, expression_id, cur)
     
     return question
