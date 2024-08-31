@@ -81,7 +81,7 @@ def get_response_format():
     return response_format
 
 def update_multiple_choice_question(question, options):
-    return f"{question}\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"
+    return f"{question}\n\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"
 
 def is_correct(question):
     if len(update_multiple_choice_question(question["question"], question["options"])) > 640:

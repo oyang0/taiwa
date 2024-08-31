@@ -25,7 +25,7 @@ def process_message(message, cur):
     question, options = question["question"], question["options"]
     text = Text(text=expression)
     random.shuffle(options)
-    buttons = [Button("postback", title=chr(97 + i), payload=option) for i, option in enumerate(options)]
+    buttons = [Button("postback", title=chr(65 + i), payload=option) for i, option in enumerate(options)]
     question = messages.update_multiple_choice_question(question, options)
     button_template = ButtonTemplate(text=question, buttons=buttons)
     return (text.to_dict(), button_template.to_dict())
