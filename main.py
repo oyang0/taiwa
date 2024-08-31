@@ -88,7 +88,7 @@ class Messenger(BaseMessenger):
                 retries.commit_with_backoff(conn)
 
                 try:
-                    if postbacks.is_options(message["sender"]["id"]):
+                    if postbacks.is_options(message["sender"]["id"], cur):
                         options = postbacks.get_options(message["sender"]["id"], cur)
 
                         if message["postback"]["payload"] in options:
