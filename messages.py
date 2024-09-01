@@ -48,7 +48,7 @@ def get_leitner_system(sender, cur):
     return leitner_system
 
 def get_random_box(leitner_system):
-    remaining_boxes = sorted([box for box, ids in leitner_system.items() if ids])
+    remaining_boxes = sorted([box for box, ids in leitner_system.items() if ids])[:5]
     weights = [weight for weight in range(2 * len(remaining_boxes) - 1, 0, -2)]
     box = random.choices(remaining_boxes, weights)[0]
     return box
