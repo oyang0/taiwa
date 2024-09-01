@@ -177,6 +177,7 @@ fb_verify_token.txt
 init_bot.txt
 init_bot_test.txt
 openai_api_key.txt
+system_instructions.txt
 
 # Adding `ngrok.exe` to your `.gitignore` file is a good practice for several reasons. First,
 # `ngrok.exe` is a binary executable file that can be quite large, which can unnecessarily bloat

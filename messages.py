@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import retries
@@ -75,7 +76,7 @@ def get_response_format():
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
     cur.execute("SELECT content FROM openai WHERE role='question_response_format'")
-    response_format = eval(cur.fetchone()[0].replace("true", "True").replace("false", "False"))
+    response_format = json.loads(cur.fetchone()[0])
     cur.close()
     conn.close()
     return response_format
@@ -93,7 +94,7 @@ def is_correct(question):
     return True
 
 def set_multiple_choice_question(question, sender, expression_id, cur):
-    question, options, answer = question["question"], repr(question["options"]), question["answer"]
+    question, options, answer = question["question"], json.dumps(question["options"]), question["answer"]
     retries.execution_with_backoff(cur, f"""
         INSERT INTO {os.environ["SCHEMA"]}.questions (sender, question, options, answer, expression_id)
         VALUES (%s, %s, %s, %s, %s)
@@ -110,7 +111,7 @@ def get_multiple_choice_question(expression, expression_id, sender, cur, client,
 
     while (not question or not is_correct(question)) and attempt < attempts: 
         questions = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
-        question = eval(questions)["questions"][-1]
+        question = json.loads(questions)["questions"][-1]
         attempt += 1
     
     if attempt == attempts:

@@ -1,3 +1,4 @@
+import json
 import os
 import retries
 import sqlite3
@@ -26,17 +27,17 @@ def get_options(sender, cur):
         FROM {os.environ["SCHEMA"]}.questions
         WHERE sender = %s
         """, (sender,))
-    options = eval(cur.fetchone()[0])
+    options = json.loads(cur.fetchone()[0])
     return options
 
-def get_question(sender, cur):
+def get_multiple_choice_question(sender, cur):
     retries.execution_with_backoff(cur, f"""
         SELECT question, options, answer, expression_id
         FROM {os.environ["SCHEMA"]}.questions
         WHERE sender = %s
         """, (sender,))
     question, options, answer, expression_id = cur.fetchone()
-    return question, eval(options), answer, expression_id
+    return question, json.loads(options), answer, expression_id
 
 def get_leitner_system(sender, cur):
     retries.execution_with_backoff(cur, f"""
@@ -55,6 +56,15 @@ def get_system_prompt():
     conn.close()
     return system_prompt
 
+def get_response_format():
+    conn = sqlite3.connect("expressions.db")
+    cur = conn.cursor()
+    cur.execute("SELECT content FROM openai WHERE role='explanation_response_format'")
+    response_format = json.loads(cur.fetchone()[0])
+    cur.close()
+    conn.close()
+    return response_format
+
 def get_expression(expression_id):
     conn = sqlite3.connect("expressions.db")
     cur = conn.cursor()
@@ -64,20 +74,16 @@ def get_expression(expression_id):
     conn.close()
     return expression
 
-def get_explanation_content(question, options, answer, expression_id):
+def update_multiple_choice_question(question, options, answer, expression_id):
     expression = get_expression(expression_id)
-    options = repr(options).replace("'", "\"").replace(" ", "")
-    context = f"\"context\":\"{expression}\""
-    question = f"\"question\":\"{question}\""
-    options = f"\"question\":{options}"
-    answer = f"\"question\":\"{answer}\""
-    explanation_content = "{%s,%s,%s,%s}" % (context, question, options, answer)
-    return explanation_content
+    question = json.dumps({"context": expression, "question": question, "options": options, "answer": answer})
+    return question
 
 def get_explanation(question, options, answer, expression_id, client):
-    system_prompt = get_system_prompt()
-    explanation_content = get_explanation_content(question, options, answer, expression_id)
-    explanation = retries.completion_creation_with_backoff(client, system_prompt, explanation_content, 0)
+    system_prompt, response_format = get_system_prompt(), get_response_format()
+    question = update_multiple_choice_question(question, options, answer, expression_id)
+    explanations = retries.completion_creation_with_backoff(client, system_prompt, question, 0, response_format)
+    explanation = json.loads(explanations)["explanations"][-1]
     return explanation
 
 def process_correct_answer(leitner_system, explanation, expression_id):
