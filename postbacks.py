@@ -82,10 +82,8 @@ def update_multiple_choice_question(question, options, answer, expression_id):
 def get_explanation(question, options, answer, expression_id, client):
     system_prompt, response_format = get_system_prompt(), get_response_format()
     question = update_multiple_choice_question(question, options, answer, expression_id)
-    print("TEST: #1")
     explanations = retries.completion_creation_with_backoff(client, system_prompt, question, 0, response_format)
-    print("TEST: #2")
-    explanation = json.loads(explanations)["explanations"][-1]
+    explanation = json.loads(explanations)["explanations"][-1]["question_explanation"]
     return explanation
 
 def process_correct_answer(leitner_system, explanation, expression_id):
