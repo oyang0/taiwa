@@ -81,10 +81,19 @@ def get_response_format():
     conn.close()
     return response_format
 
+def get_evaluation_format():
+    conn = sqlite3.connect("expressions.db")
+    cur = conn.cursor()
+    cur.execute("SELECT content FROM openai WHERE role='question_evaluation_format'")
+    response_format = json.loads(cur.fetchone()[0])
+    cur.close()
+    conn.close()
+    return response_format
+
 def update_multiple_choice_question(question, options):
     return f"{question}\n\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"
 
-def is_correct(question):
+def is_correct_question(question):
     if len(update_multiple_choice_question(question["question"], question["options"])) > 640:
         return False
     elif len(question["options"]) > 3:
@@ -92,6 +101,11 @@ def is_correct(question):
     elif question["answer"] not in question["options"]:
         return False
     return True
+
+def get_input_messages(system_prompt, user_content, assistant_contents = []):
+    initial_messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_content}]
+    final_messages = [{"role": "assistant", "content": content} for content in assistant_contents]
+    return initial_messages + final_messages
 
 def set_multiple_choice_question(question, sender, expression_id, cur):
     question, options, answer = question["question"], json.dumps(question["options"]), question["answer"]
@@ -106,16 +120,25 @@ def set_multiple_choice_question(question, sender, expression_id, cur):
             expression_id = EXCLUDED.expression_id
         """, (sender, question, options, answer, expression_id))
 
-def get_multiple_choice_question(expression, expression_id, sender, cur, client, attempts=6):
-    question, attempt, system_prompt, response_format = None, 0, get_system_prompt(), get_response_format()
+def get_multiple_choice_question(expression, expression_id, sender, cur, client):
+    is_correct, assistant_contents = False, []
+    system_prompt = get_system_prompt()
+    response_format = get_response_format()
+    evaluation_format = get_evaluation_format()
 
-    while (not question or not is_correct(question)) and attempt < attempts: 
-        questions = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
-        question = json.loads(questions)["questions"][-1]
-        attempt += 1
+    while not is_correct:
+        messages = get_input_messages(system_prompt, expression)
+        question = retries.completion_creation_with_backoff(client, messages, 1, response_format)
+        assistant_contents.append(question)
+        messages = get_input_messages(system_prompt, expression, assistant_contents)
+        evaluation = retries.completion_creation_with_backoff(client, messages, 0, evaluation_format)
+        assistant_contents.append(evaluation)
+        is_correct = json.loads(evaluation)["evaluation_answer"] == "Correct"
     
-    if attempt == attempts:
-        raise Exception("Failed to create multiple choice question")
+    question = json.loads(question)
+
+    if not is_correct_question(question):
+        raise Exception("Failed to get valid multiple choice question")
     
     set_multiple_choice_question(question, sender, expression_id, cur)
     

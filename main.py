@@ -34,7 +34,7 @@ def process_postback(message, cur):
     sender, payload = message["sender"]["id"], message["postback"]["payload"]
     question, options, answer, expression_id = postbacks.get_multiple_choice_question(sender, cur)
     leitner_system = postbacks.get_leitner_system(sender, cur)
-    explanation = postbacks.get_explanation(question, options, answer, expression_id, client)
+    explanation = postbacks.get_question_explanation(question, options, answer, expression_id, client)
     response = postbacks.process_answer(answer, payload, leitner_system, explanation, expression_id, sender, cur)
     text = Text(text=response)
     return (text.to_dict(),)

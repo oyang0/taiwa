@@ -40,19 +40,10 @@ def close_cursor_and_connection_with_backoff(cur, conn):
     close_connection_with_backoff(conn)
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), reraise=True)
-def completion_creation_with_backoff(client, system_prompt, content, temperature=None, response_format=None):
+def completion_creation_with_backoff(client, messages, temperature=None, response_format=None):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": content
-            }
-        ],
+        messages=messages,
         temperature=temperature,
         response_format=response_format
     )

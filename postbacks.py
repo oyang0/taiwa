@@ -77,12 +77,14 @@ def get_expression(expression_id):
 def update_multiple_choice_question(question, options, answer, expression_id):
     expression = get_expression(expression_id)
     question = json.dumps({"context": expression, "question": question, "options": options, "answer": answer})
+    question = question.replace(" ", "")
     return question
 
-def get_explanation(question, options, answer, expression_id, client):
+def get_question_explanation(question, options, answer, expression_id, client):
     system_prompt, response_format = get_system_prompt(), get_response_format()
     question = update_multiple_choice_question(question, options, answer, expression_id)
-    explanations = retries.completion_creation_with_backoff(client, system_prompt, question, 0, response_format)
+    messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": question}]
+    explanations = retries.completion_creation_with_backoff(client, messages, 0, response_format)
     explanation = json.loads(explanations)["explanations"][-1]["question_explanation"]
     return explanation
 
