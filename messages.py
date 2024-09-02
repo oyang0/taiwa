@@ -138,7 +138,7 @@ def get_multiple_choice_question(expression, expression_id, sender, cur, client)
     question = json.loads(question)
 
     if not is_correct_question(question):
-        raise Exception("Failed to get valid multiple choice question")
+        raise Exception("failed to get valid multiple choice question")
     
     set_multiple_choice_question(question, sender, expression_id, cur)
     

@@ -4,7 +4,6 @@ from fbmessenger.elements import Text
 
 def process_exception(exception):
     exception = f"{exception}"
-    exception = exception.replace(os.environ["ASSISTANT_ID"], "?")
     exception = exception.replace(os.environ["DATABASE_URL"], "?")
     exception = exception.replace(os.environ["FB_PAGE_TOKEN"], "?")
     exception = exception.replace(os.environ["FB_VERIFY_TOKEN"], "?")
