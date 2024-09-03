@@ -88,8 +88,9 @@ def get_question_explanation(question, options, answer, expression_id, app, clie
     system_prompt, response_format = get_system_prompt(), get_response_format()
     user_prompt = get_user_prompt(question, options, answer, expression_id)
     explanation = retries.completion_creation_with_backoff(client, system_prompt, user_prompt, 0, response_format)
+    explanation = json.loads(explanation)
     app.logger.debug(f"Thoughts created: {explanation["thoughts"]}")
-    explanation = json.loads(explanation)["explanation"]
+    explanation = explanation["explanation"]
     return explanation
 
 def process_correct_answer(leitner_system, explanation, expression_id):
