@@ -21,8 +21,7 @@ def process_message(message, cur):
     leitner_system = messages.get_leitner_system(sender, cur)
     box = messages.get_random_box(leitner_system)
     expression_id, expression = messages.get_random_expression(leitner_system, box)
-    question = messages.get_multiple_choice_question(expression, expression_id, sender, cur, client)
-    question, options = question["question"], question["options"]
+    question, options = messages.get_multiple_choice_question(expression, expression_id, sender, cur, app, client)
     text = Text(text=expression)
     random.shuffle(options)
     buttons = [Button("postback", title=chr(65 + i), payload=option) for i, option in enumerate(options)]
@@ -34,7 +33,7 @@ def process_postback(message, cur):
     sender, payload = message["sender"]["id"], message["postback"]["payload"]
     question, options, answer, expression_id = postbacks.get_multiple_choice_question(sender, cur)
     leitner_system = postbacks.get_leitner_system(sender, cur)
-    explanation = postbacks.get_question_explanation(question, options, answer, expression_id, client)
+    explanation = postbacks.get_question_explanation(question, options, answer, expression_id, app, client)
     response = postbacks.process_answer(answer, payload, leitner_system, explanation, expression_id, sender, cur)
     text = Text(text=response)
     return (text.to_dict(),)

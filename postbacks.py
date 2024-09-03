@@ -74,18 +74,22 @@ def get_expression(expression_id):
     conn.close()
     return expression
 
-def update_multiple_choice_question(question, options, answer, expression_id):
-    expression = get_expression(expression_id)
-    question = json.dumps({"context": expression, "question": question, "options": options, "answer": answer})
-    question = question.replace(" ", "")
+def update_multiple_choice_question(question, options):
+    question = f"{question}\n\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"
     return question
 
-def get_question_explanation(question, options, answer, expression_id, client):
+def get_user_prompt(question, options, answer, expression_id):
+    expression = get_expression(expression_id)
+    question = update_multiple_choice_question(question, options)
+    user_content = f"Content: {expression}\n\nQuestion: {question}\n\nAnswer: {answer}"
+    return user_content
+
+def get_question_explanation(question, options, answer, expression_id, app, client):
     system_prompt, response_format = get_system_prompt(), get_response_format()
-    question = update_multiple_choice_question(question, options, answer, expression_id)
-    messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": question}]
-    explanations = retries.completion_creation_with_backoff(client, messages, 0, response_format)
-    explanation = json.loads(explanations)["explanations"][-1]["question_explanation"]
+    user_prompt = get_user_prompt(question, options, answer, expression_id)
+    explanation = retries.completion_creation_with_backoff(client, system_prompt, user_prompt, 0, response_format)
+    app.logger.debug(f"Thoughts created: {explanation["thoughts"]}")
+    explanation = json.loads(explanation)["explanation"]
     return explanation
 
 def process_correct_answer(leitner_system, explanation, expression_id):

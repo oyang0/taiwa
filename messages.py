@@ -91,9 +91,10 @@ def get_evaluation_format():
     return response_format
 
 def update_multiple_choice_question(question, options):
-    return f"{question}\n\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"
+    question = f"{question}\n\n{"\n".join([f"({chr(97 + i)}) {option}" for i, option in enumerate(options)])}"
+    return question
 
-def is_correct_question(question):
+def is_valid_question(question):
     if len(update_multiple_choice_question(question["question"], question["options"])) > 640:
         return False
     elif len(question["options"]) > 3:
@@ -101,11 +102,6 @@ def is_correct_question(question):
     elif question["answer"] not in question["options"]:
         return False
     return True
-
-def get_input_messages(system_prompt, user_content, assistant_contents = []):
-    initial_messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_content}]
-    final_messages = [{"role": "assistant", "content": content} for content in assistant_contents]
-    return initial_messages + final_messages
 
 def set_multiple_choice_question(question, sender, expression_id, cur):
     question, options, answer = question["question"], json.dumps(question["options"]), question["answer"]
@@ -120,26 +116,19 @@ def set_multiple_choice_question(question, sender, expression_id, cur):
             expression_id = EXCLUDED.expression_id
         """, (sender, question, options, answer, expression_id))
 
-def get_multiple_choice_question(expression, expression_id, sender, cur, client):
-    is_correct, assistant_contents = False, []
-    system_prompt = get_system_prompt()
-    response_format = get_response_format()
-    evaluation_format = get_evaluation_format()
+def get_multiple_choice_question(expression, expression_id, sender, cur, app, client, attempts=6):
+    question, attempt, system_prompt, response_format = None, 0, get_system_prompt(), get_response_format()
 
-    while not is_correct:
-        messages = get_input_messages(system_prompt, expression)
-        question = retries.completion_creation_with_backoff(client, messages, 1, response_format)
-        assistant_contents.append(question)
-        messages = get_input_messages(system_prompt, expression, assistant_contents)
-        evaluation = retries.completion_creation_with_backoff(client, messages, 0, evaluation_format)
-        assistant_contents.append(evaluation)
-        is_correct = json.loads(evaluation)["evaluation_answer"] == "Correct"
-    
-    question = json.loads(question)
+    while not question or not is_valid_question(question):
+        question = retries.completion_creation_with_backoff(client, system_prompt, expression, 1, response_format)
+        question = json.loads(question)
+        attempt += 1
 
-    if not is_correct_question(question):
-        raise Exception("failed to get valid multiple choice question")
+        if attempt == attempts:
+            raise Exception("failed to get valid multiple choice question")
     
+    app.logger.debug(f"Thoughts created: {question["thoughts"]}")
     set_multiple_choice_question(question, sender, expression_id, cur)
+    question, options = question["question"], question["options"]
     
-    return question
+    return question, options
