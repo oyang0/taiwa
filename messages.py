@@ -128,6 +128,7 @@ def get_multiple_choice_question(expression, expression_id, sender, cur, app, cl
             raise Exception("failed to get valid multiple choice question")
     
     app.logger.debug(f"Thoughts created: {question["thoughts"]}")
+    random.shuffle(question["options"])
     set_multiple_choice_question(question, sender, expression_id, cur)
     question, options = question["question"], question["options"]
     

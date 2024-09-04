@@ -4,7 +4,6 @@ import exceptions
 import messages
 import os
 import postbacks
-import random
 import retries
 
 from collections.abc import Iterable
@@ -23,7 +22,6 @@ def process_message(message, cur):
     expression_id, expression = messages.get_random_expression(leitner_system, box)
     question, options = messages.get_multiple_choice_question(expression, expression_id, sender, cur, app, client)
     text = Text(text=expression)
-    random.shuffle(options)
     buttons = [Button("postback", title=chr(65 + i), payload=option) for i, option in enumerate(options)]
     question = messages.update_multiple_choice_question(question, options)
     button_template = ButtonTemplate(text=question, buttons=buttons)
